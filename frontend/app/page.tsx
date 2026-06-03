@@ -1,65 +1,155 @@
-import Image from "next/image";
+"use client";
+
+import { useState } from "react";
+import Navbar from "../components/Navbar";
+import FilterButton from "../components/FilterButton";
+import IncidentCard from "../components/IncidentCard";
+import IncidentDetail from "../components/IncidentDetail";
+
+const mockIncidents = [
+  {
+    id: "1",
+    title: "Database connection timeout",
+    description: "AI-bedömning: Databaslutningen har högt sla på grund av hög belastning.",
+    severity: "Kritisk" as const,
+    service: "API Gateway",
+    environment: "Prod-EU",
+    timestamp: "14:32:21",
+    status: "Åtgärdad" as const,
+    timeline: [
+      { time: "14:32:21", title: "Händelse upptäckt", description: "Database connection timeout | API Gateway" },
+      { time: "14:32:23", title: "AI-analys klar", description: "AI identifierade trolig orsak och förslag åtgärd (92% konfidens)" },
+      { time: "14:32:25", title: "Åtgärd initierad", description: "Lambda-funktion restart_db_connection kördes" },
+      { time: "14:33:02", title: "Verifiering", description: "Anslutning återställd, felrate tillbaka till normal nivå" },
+    ],
+    actions: [
+      { id: "1", title: "Omstartade databasanslutning via Lambda: restart_db_connection", timestamp: "Started 14:32:25", status: "Klar" as const },
+    ],
+    relatedIncidents: [
+      { title: "API Gateway latency spike", service: "API Gateway" },
+      { title: "Database CPU high", service: "Database" },
+    ],
+  },
+  {
+    id: "2",
+    title: "High memory usage detected",
+    description: "En minnesläcka upptäcktes i User Service som orsakade hög belastning.",
+    severity: "Varning" as const,
+    service: "User Service",
+    environment: "Prod-EU",
+    timestamp: "14:28:10",
+    status: "Åtgärdad" as const,
+    timeline: [
+      { time: "14:28:10", title: "Varning identifierad" },
+      { time: "14:28:15", title: "AI-analysis klar" },
+    ],
+    actions: [],
+    relatedIncidents: [],
+  },
+  {
+    id: "3",
+    title: "Payment processing failed",
+    description: "Betalningsprocessering misslyckades för ett stort batch av transaktioner.",
+    severity: "Kritisk" as const,
+    service: "Payment Service",
+    environment: "Prod-EU",
+    timestamp: "14:25:47",
+    status: "Eskalerad" as const,
+    timeline: [],
+    actions: [],
+    relatedIncidents: [],
+  },
+  {
+    id: "4",
+    title: "File upload completed",
+    description: "En filuppladdning slutfördes utan problem.",
+    severity: "Info" as const,
+    service: "File Service",
+    environment: "Prod-EU",
+    timestamp: "14:20:33",
+    status: "Åtgärdad" as const,
+    timeline: [],
+    actions: [],
+    relatedIncidents: [],
+  },
+  {
+    id: "5",
+    title: "Rate limit approaching",
+    description: "API Gateway närmar sig rate limit för en av API-nycklarna.",
+    severity: "Varning" as const,
+    service: "API Gateway",
+    environment: "Prod-EU",
+    timestamp: "14:18:02",
+    status: "Åtgärdad" as const,
+    timeline: [],
+    actions: [],
+    relatedIncidents: [],
+  },
+  {
+    id: "6",
+    title: "Authentication failures",
+    description: "En ökning i autentiseringsfel identifierades.",
+    severity: "Kritisk" as const,
+    service: "Auth Service",
+    environment: "Prod-EU",
+    timestamp: "14:15:29",
+    status: "Eskalerad" as const,
+    timeline: [],
+    actions: [],
+    relatedIncidents: [],
+  },
+];
 
 export default function Home() {
+  const [selectedIncident, setSelectedIncident] = useState<string | null>(null);
+  const [filter, setFilter] = useState<"Alla" | "Kritiska" | "Varningar" | "Info">("Alla");
+
+  const incident = mockIncidents.find((i) => i.id === selectedIncident);
+
+  const filteredIncidents = mockIncidents.filter((i) => {
+    if (filter === "Alla") return true;
+    if (filter === "Kritiska") return i.severity === "Kritisk";
+    if (filter === "Varningar") return i.severity === "Varning";
+    if (filter === "Info") return i.severity === "Info";
+    return true;
+  });
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
+    <div className="flex min-h-screen bg-slate-950 text-slate-100">
+      <Navbar />
+      <main className="flex flex-1 flex-col gap-8 px-10 py-8 overflow-y-auto">
+        <div>
+          <h1 className="text-3xl font-semibold text-slate-50">Händelser</h1>
+          <p className="mt-2 text-sm text-slate-400">
+            AI-övervakade incidenter i realtid
           </p>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
+
+        <div className="flex gap-3">
+          <FilterButton label="Alla" count={47} active={filter === "Alla"} onClick={() => setFilter("Alla")} />
+          <FilterButton label="Kritiska" count={12} active={filter === "Kritiska"} onClick={() => setFilter("Kritiska")} />
+          <FilterButton label="Varningar" count={18} active={filter === "Varningar"} onClick={() => setFilter("Varningar")} />
+          <FilterButton label="Info" count={17} active={filter === "Info"} onClick={() => setFilter("Info")} />
+        </div>
+
+        <div className="space-y-3 pr-4">
+          {filteredIncidents.map((inc) => (
+            <IncidentCard
+              key={inc.id}
+              {...inc}
+              onClick={() => setSelectedIncident(inc.id === selectedIncident ? null : inc.id)}
+              isSelected={selectedIncident === inc.id}
             />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+          ))}
         </div>
       </main>
+
+      {incident && (
+        <IncidentDetail
+          {...incident}
+          onClose={() => setSelectedIncident(null)}
+        />
+      )}
     </div>
   );
 }
