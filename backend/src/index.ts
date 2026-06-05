@@ -3,6 +3,8 @@ import cors from "cors";
 import dotenv from "dotenv";
 
 import { connectDB } from "./config/database";
+import staffRoutes from "./routes/staff.routes";
+import incidentRoutes from "./routes/incidents.routes";
 
 dotenv.config({ quiet: true });
 
@@ -17,6 +19,9 @@ app.use(
   }),
 );
 app.use(express.json());
+
+app.use("/staff", staffRoutes);
+app.use("/incidents", incidentRoutes);
 
 app.get("/", (_req, res) => {
   res.send("Server running");

@@ -22,7 +22,7 @@ async function seedDatabaseWithStaff() {
       return {
         name: `${firstName} ${lastName}`,
         email: `${firstName.toLowerCase()}.${lastName.toLowerCase()}@acme.com`,
-        department: faker.person.jobTitle(),
+        department: faker.helpers.arrayElement(department),
         organization: "Acme",
       };
     });
