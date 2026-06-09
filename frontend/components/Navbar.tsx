@@ -1,6 +1,27 @@
 import Image from "next/image";
 
-export default function RightNavbar() {
+type AppTab = "incidents" | "settings";
+
+type NavbarProps = {
+  activeTab: AppTab;
+  onTabChange: (tab: AppTab) => void;
+};
+
+export default function RightNavbar({ activeTab, onTabChange }: NavbarProps) {
+  const navItemClass = (tab: AppTab) =>
+    `flex items-center gap-3 rounded-2xl px-4 py-3 text-left text-sm font-semibold transition ${
+      activeTab === tab
+        ? "bg-emerald-500/10 text-emerald-100 ring-1 ring-emerald-400/20"
+        : "text-slate-200 hover:bg-slate-800/50"
+    }`;
+
+  const iconClass = (tab: AppTab) =>
+    `inline-flex h-8 w-8 items-center justify-center rounded-full ${
+      activeTab === tab
+        ? "bg-emerald-500/20 text-emerald-200"
+        : "bg-slate-800/70 text-slate-300"
+    }`;
+
   return (
     <aside className="sticky top-0 flex h-screen w-64 flex-col gap-6 border-r border-slate-800/80 bg-gradient-to-b from-slate-950 via-slate-950 to-slate-900 px-6 py-8 text-slate-100 shadow-[0_0_30px_rgba(0,0,0,0.35)]">
       <div className="flex items-center gap-3">
@@ -22,11 +43,12 @@ export default function RightNavbar() {
       </div>
 
       <nav className="flex flex-col gap-2">
-        <a
-          className="flex items-center gap-3 rounded-2xl bg-emerald-500/10 px-4 py-3 text-sm font-semibold text-emerald-100 ring-1 ring-emerald-400/20"
-          href="#"
+        <button
+          type="button"
+          className={navItemClass("incidents")}
+          onClick={() => onTabChange("incidents")}
         >
-          <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-emerald-500/20 text-emerald-200">
+          <span className={iconClass("incidents")}>
             <svg
               viewBox="0 0 24 24"
               className="h-4 w-4"
@@ -43,12 +65,13 @@ export default function RightNavbar() {
             </svg>
           </span>
           Handelser
-        </a>
-        <a
-          className="flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-semibold text-slate-200 transition hover:bg-slate-800/50"
-          href="#"
+        </button>
+        <button
+          type="button"
+          className={navItemClass("settings")}
+          onClick={() => onTabChange("settings")}
         >
-          <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-slate-800/70 text-slate-300">
+          <span className={iconClass("settings")}>
             <svg
               viewBox="0 0 24 24"
               className="h-4 w-4"
@@ -71,7 +94,7 @@ export default function RightNavbar() {
             </svg>
           </span>
           Inställningar
-        </a>
+        </button>
       </nav>
 
       <div className="mt-auto rounded-2xl border border-slate-800/80 bg-slate-950/60 p-4">

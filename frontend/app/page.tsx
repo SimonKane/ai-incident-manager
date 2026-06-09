@@ -5,6 +5,7 @@ import Navbar from "../components/Navbar";
 import FilterButton from "../components/FilterButton";
 import IncidentCard from "../components/IncidentCard";
 import IncidentDetail from "../components/IncidentDetail";
+import StaffSettings from "../components/StaffSettings";
 
 const mockIncidents = [
   {
@@ -101,6 +102,9 @@ const mockIncidents = [
 ];
 
 export default function Home() {
+  const [activeTab, setActiveTab] = useState<"incidents" | "settings">(
+    "incidents",
+  );
   const [selectedIncident, setSelectedIncident] = useState<string | null>(null);
   const [filter, setFilter] = useState<"Alla" | "Kritiska" | "Varningar" | "Info">("Alla");
 
@@ -116,35 +120,42 @@ export default function Home() {
 
   return (
     <div className="flex min-h-screen bg-slate-950 text-slate-100">
-      <Navbar />
-      <main className="flex flex-1 flex-col gap-8 px-10 py-8 overflow-y-auto">
-        <div>
-          <h1 className="text-3xl font-semibold text-slate-50">Händelser</h1>
-          <p className="mt-2 text-sm text-slate-400">
-            AI-övervakade incidenter i realtid
-          </p>
-        </div>
+      <Navbar activeTab={activeTab} onTabChange={setActiveTab} />
 
-        <div className="flex gap-3">
-          <FilterButton label="Alla" count={47} active={filter === "Alla"} onClick={() => setFilter("Alla")} />
-          <FilterButton label="Kritiska" count={12} active={filter === "Kritiska"} onClick={() => setFilter("Kritiska")} />
-          <FilterButton label="Varningar" count={18} active={filter === "Varningar"} onClick={() => setFilter("Varningar")} />
-          <FilterButton label="Info" count={17} active={filter === "Info"} onClick={() => setFilter("Info")} />
-        </div>
+      {activeTab === "incidents" ? (
+        <main className="flex flex-1 flex-col gap-8 px-10 py-8 overflow-y-auto">
+          <div>
+            <h1 className="text-3xl font-semibold text-slate-50">
+              Händelser
+            </h1>
+            <p className="mt-2 text-sm text-slate-400">
+              AI-övervakade incidenter i realtid
+            </p>
+          </div>
 
-        <div className="space-y-3 pr-4">
-          {filteredIncidents.map((inc) => (
-            <IncidentCard
-              key={inc.id}
-              {...inc}
-              onClick={() => setSelectedIncident(inc.id === selectedIncident ? null : inc.id)}
-              isSelected={selectedIncident === inc.id}
-            />
-          ))}
-        </div>
-      </main>
+          <div className="flex gap-3">
+            <FilterButton label="Alla" count={47} active={filter === "Alla"} onClick={() => setFilter("Alla")} />
+            <FilterButton label="Kritiska" count={12} active={filter === "Kritiska"} onClick={() => setFilter("Kritiska")} />
+            <FilterButton label="Varningar" count={18} active={filter === "Varningar"} onClick={() => setFilter("Varningar")} />
+            <FilterButton label="Info" count={17} active={filter === "Info"} onClick={() => setFilter("Info")} />
+          </div>
 
-      {incident && (
+          <div className="space-y-3 pr-4">
+            {filteredIncidents.map((inc) => (
+              <IncidentCard
+                key={inc.id}
+                {...inc}
+                onClick={() => setSelectedIncident(inc.id === selectedIncident ? null : inc.id)}
+                isSelected={selectedIncident === inc.id}
+              />
+            ))}
+          </div>
+        </main>
+      ) : (
+        <StaffSettings />
+      )}
+
+      {activeTab === "incidents" && incident && (
         <IncidentDetail
           {...incident}
           onClose={() => setSelectedIncident(null)}

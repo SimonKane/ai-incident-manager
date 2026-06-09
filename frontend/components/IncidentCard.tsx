@@ -39,7 +39,6 @@ const statusConfig = {
 };
 
 export default function IncidentCard({
-  id,
   title,
   description,
   severity,
