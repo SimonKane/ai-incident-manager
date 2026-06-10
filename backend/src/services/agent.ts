@@ -1,5 +1,9 @@
 import Anthropic from "@anthropic-ai/sdk";
-import { Incident, IncidentType } from "../models/incident.model";
+import { IncidentType, Incident } from "../models/incident.model";
+import { Staff } from "../models/staff.model";
+import { connectDB } from "../config/database";
+import { Analyzed, AnalyzedType } from "../models/analyzedIncident.model";
+
 const client = new Anthropic();
 
 const testdata = {
@@ -27,14 +31,25 @@ const testdata2 = [
   "Service: payment-processor | Cluster: prod-cluster | Desired: 3 | Running: 0",
 ];
 
+const testdata3 = [
+  "eventTime: 2026-06-10T05:30:01Z",
+  "eventName: DeleteBucket",
+  "eventSource: s3.amazonaws.com",
+  "userIdentity.type: IAMUser",
+  "userIdentity.userName: temp-contractor-04",
+  "requestParameters.bucketName: prod-customer-exports",
+  "sourceIPAddress: 203.0.113.77",
+  "userAgent: aws-cli/2.9.0",
+  "errorCode: (none)",
+  "additionalEventData.DeleteMarkerCreated: false",
+];
+
 async function normalize(data: any) {
   const session = await client.beta.sessions.create({
     agent: "agent_017DBieyHopJheGedyLijfDq",
     environment_id: "env_01XiGui8aQgwsben2ass7Vto",
     title: `${Math.floor(1000000000 + Math.random() * 9000000000)}`,
   });
-
-  console.log(`Session ID: ${session.id}`);
 
   const stream = await client.beta.sessions.events.stream(session.id);
 
@@ -63,8 +78,90 @@ async function normalize(data: any) {
       break;
     }
   }
-  console.log(JSON.parse(response));
-  const final = JSON.parse(response);
+  const cleaned = response
+    .trim()
+    .replace(/^```(?:json)?\s*/, "")
+    .replace(/\s*```$/, "");
+  const normalized = JSON.parse(cleaned);
+  const incident: Omit<IncidentType, "_id"> = {
+    title: normalized.title,
+    description: normalized.description,
+    severity: normalized.severity,
+    service: normalized.service,
+    environment: normalized.environment,
+    timestamp: normalized.timestamp,
+    status: normalized.status,
+    timeline: normalized.timeline,
+  };
+
+  const saved = await Incident.create({ ...incident });
+  return saved;
 }
 
-normalize(testdata2).catch(console.error);
+async function analyze(data: any) {
+  try {
+    connectDB().catch(console.error);
+
+    const incident = await normalize(data);
+
+    console.log(incident);
+
+    const staff = await Staff.find({});
+
+    const session = await client.beta.sessions.create({
+      agent: "agent_01GhmDyyF5vmMhPqaoBWmGhQ",
+      environment_id: "env_01XiGui8aQgwsben2ass7Vto",
+      title: `${Math.floor(1000000000 + Math.random() * 9000000000)}`,
+    });
+
+    const stream = await client.beta.sessions.events.stream(session.id);
+
+    await client.beta.sessions.events.send(session.id, {
+      events: [
+        {
+          type: "user.message",
+          content: [
+            {
+              type: "text",
+              text: `Available staff:\n${JSON.stringify(staff, null, 2)}\n\nIncident:\n${JSON.stringify(incident, null, 2)}`,
+            },
+          ],
+        },
+      ],
+    });
+    let response = "";
+
+    for await (const event of stream) {
+      if (event.type === "agent.message") {
+        for (const block of event.content) {
+          response += block.text;
+        }
+      } else if (event.type === "session.status_idle") {
+        break;
+      }
+    }
+    const cleaned = response
+      .trim()
+      .replace(/^```(?:json)?\s*/, "")
+      .replace(/\s*```$/, "");
+    const normalized = JSON.parse(cleaned);
+
+    const analyzed: Omit<AnalyzedType, "_id"> = {
+      type: normalized.type,
+      priority: normalized.priority,
+      action: normalized.action,
+      target: normalized.target,
+      assignedTo: normalized.assignedTo,
+      recommendation: normalized.recommendation,
+      incident: incident._id,
+    };
+
+    await Analyzed.create({ ...analyzed });
+    console.log("done");
+    return analyzed;
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+analyze(testdata);
