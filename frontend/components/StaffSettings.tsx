@@ -38,6 +38,7 @@ export default function StaffSettings() {
   const [form, setForm] = useState(emptyForm);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [updatingStaffIds, setUpdatingStaffIds] = useState<string[]>([]);
   const [listError, setListError] = useState<string | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
 
@@ -158,6 +159,12 @@ export default function StaffSettings() {
     }
 
     setListError(null);
+    setUpdatingStaffIds((currentIds) => [...currentIds, staffId]);
+    setStaff((currentStaff) =>
+      currentStaff.map((member) =>
+        member._id === staffId ? { ...member, preferredNotification } : member,
+      ),
+    );
 
     try {
       const response = await fetch(`${API_URL}/staff/${staffId}`, {
@@ -168,16 +175,20 @@ export default function StaffSettings() {
 
       if (!response.ok) throw new Error("Kunde inte uppdatera tekniker");
 
-      const updatedStaff = (await response.json()) as StaffMember;
+      await response.json();
       setStaff((currentStaff) =>
         currentStaff.map((member) =>
           member._id === staffId
-            ? { ...updatedStaff, preferredNotification }
+            ? { ...member, preferredNotification }
             : member,
         ),
       );
     } catch (err) {
       setListError(err instanceof Error ? err.message : "Något gick fel");
+    } finally {
+      setUpdatingStaffIds((currentIds) =>
+        currentIds.filter((currentId) => currentId !== staffId),
+      );
     }
   }
 
@@ -254,6 +265,9 @@ export default function StaffSettings() {
                         const checked = notifications.includes(option.value);
                         const isOnlySelectedOption =
                           checked && notifications.length === 1;
+                        const isUpdating = updatingStaffIds.includes(
+                          member._id,
+                        );
 
                         return (
                           <label
@@ -262,12 +276,12 @@ export default function StaffSettings() {
                               checked
                                 ? "bg-emerald-500/15 text-emerald-100 ring-1 ring-emerald-400/30"
                                 : "bg-slate-900 text-slate-400 ring-1 ring-slate-800 hover:bg-slate-800/80"
-                            } ${isOnlySelectedOption ? "cursor-not-allowed opacity-80" : ""}`}
+                            } ${isOnlySelectedOption || isUpdating ? "cursor-not-allowed opacity-80" : ""}`}
                           >
                             <input
                               type="checkbox"
                               checked={checked}
-                              disabled={isOnlySelectedOption}
+                              disabled={isOnlySelectedOption || isUpdating}
                               onChange={() =>
                                 toggleMemberNotification(member, option.value)
                               }
@@ -279,7 +293,9 @@ export default function StaffSettings() {
                       })}
                     </div>
                     <p className="mt-2 text-xs text-slate-500">
-                      {formatPreferredNotifications(member)}
+                      {updatingStaffIds.includes(member._id)
+                        ? "Sparar..."
+                        : formatPreferredNotifications(member)}
                     </p>
                   </div>
                   <button
