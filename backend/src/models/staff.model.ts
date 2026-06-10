@@ -18,6 +18,8 @@ const staffSchema = new Schema(
       default: ["email"],
       required: true,
     },
+    isOnVacation: { type: Boolean, default: false, required: true },
+    slackUserId: { type: String, required: false, trim: true },
   },
   { timestamps: false, collection: "staff" },
 );

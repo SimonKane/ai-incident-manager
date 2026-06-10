@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import { Staff } from "../models/staff.model";
+import { sendSlackDm } from "../services/slack.service";
 
 const notificationOptions = ["email", "phone", "sms", "slack"];
 
@@ -17,6 +18,15 @@ function hasValidNotifications(value: string[]) {
   );
 }
 
+function getFallbackSlackUserId() {
+  return process.env.SLACK_TEST_USER_ID || process.env.slackUserId;
+}
+
+function normalizeSlackUserId(value: string | undefined) {
+  const slackUserId = value?.trim();
+  return slackUserId || undefined;
+}
+
 export async function getAllStaff(_req: Request, res: Response) {
   try {
     const staff = await Staff.find({});
@@ -29,13 +39,28 @@ export async function getAllStaff(_req: Request, res: Response) {
 
 export async function createStaff(req: Request, res: Response) {
   try {
-    const { name, email, department, organization, preferredNotification } =
-      req.body;
+    const {
+      name,
+      email,
+      department,
+      organization,
+      preferredNotification,
+      isOnVacation = false,
+      slackUserId,
+    } = req.body;
 
     if (!name || !email || !department || !organization) {
       return res.status(400).json({
         message: "name, email, department and organization are required",
       });
+    }
+
+    if (typeof isOnVacation !== "boolean") {
+      return res.status(400).json({ message: "Invalid isOnVacation" });
+    }
+
+    if (slackUserId !== undefined && typeof slackUserId !== "string") {
+      return res.status(400).json({ message: "Invalid slackUserId" });
     }
 
     const notifications = normalizePreferredNotification(preferredNotification);
@@ -44,12 +69,22 @@ export async function createStaff(req: Request, res: Response) {
       return res.status(400).json({ message: "Invalid preferredNotification" });
     }
 
+    const normalizedSlackUserId = normalizeSlackUserId(slackUserId);
+
+    if (notifications.includes("slack") && !normalizedSlackUserId) {
+      return res.status(400).json({
+        message: "slackUserId is required when Slack is selected",
+      });
+    }
+
     const staff = await Staff.create({
       name,
       email,
       department,
       organization,
       preferredNotification: notifications,
+      isOnVacation,
+      slackUserId: normalizedSlackUserId,
     });
 
     return res.status(201).json(staff);
@@ -62,20 +97,71 @@ export async function createStaff(req: Request, res: Response) {
 
 export async function updateStaff(req: Request, res: Response) {
   try {
-    const { preferredNotification } = req.body;
-    const notifications = normalizePreferredNotification(preferredNotification);
+    const { preferredNotification, isOnVacation, slackUserId } = req.body;
+    const updates: {
+      preferredNotification?: string[];
+      isOnVacation?: boolean;
+      slackUserId?: string;
+    } = {};
 
-    if (!hasValidNotifications(notifications)) {
-      return res.status(400).json({ message: "Invalid preferredNotification" });
+    if (preferredNotification !== undefined) {
+      const notifications = normalizePreferredNotification(preferredNotification);
+
+      if (!hasValidNotifications(notifications)) {
+        return res
+          .status(400)
+          .json({ message: "Invalid preferredNotification" });
+      }
+
+      updates.preferredNotification = notifications;
+    }
+
+    if (isOnVacation !== undefined) {
+      if (typeof isOnVacation !== "boolean") {
+        return res.status(400).json({ message: "Invalid isOnVacation" });
+      }
+
+      updates.isOnVacation = isOnVacation;
+    }
+
+    if (slackUserId !== undefined) {
+      if (typeof slackUserId !== "string") {
+        return res.status(400).json({ message: "Invalid slackUserId" });
+      }
+
+      updates.slackUserId = normalizeSlackUserId(slackUserId);
+    }
+
+    if (Object.keys(updates).length === 0) {
+      return res.status(400).json({
+        message: "No supported staff fields provided",
+      });
+    }
+
+    const existingStaff = await Staff.findById(req.params.id);
+
+    if (!existingStaff) {
+      return res.status(404).json({ message: "Staff not found" });
+    }
+
+    const nextNotifications =
+      updates.preferredNotification || existingStaff.preferredNotification;
+    const nextSlackUserId =
+      updates.slackUserId !== undefined
+        ? updates.slackUserId
+        : existingStaff.slackUserId;
+
+    if (nextNotifications.includes("slack") && !nextSlackUserId) {
+      return res.status(400).json({
+        message: "slackUserId is required when Slack is selected",
+      });
     }
 
     const staff = await Staff.findByIdAndUpdate(
       req.params.id,
-      { preferredNotification: notifications },
+      updates,
       { returnDocument: "after", runValidators: true },
     );
-
-    if (!staff) return res.status(404).json({ message: "Staff not found" });
 
     return res.status(200).json(staff);
   } catch (error) {
@@ -91,10 +177,52 @@ export async function deleteStaff(req: Request, res: Response) {
 
     if (!staff) return res.status(404).json({ message: "Staff not found" });
 
+    const slackUserId = staff.slackUserId || getFallbackSlackUserId();
+
+    if (slackUserId) {
+      await sendSlackDm(
+        slackUserId,
+        `Test från AI Incident Manager: ${staff.name} togs bort.`,
+      );
+    }
+
     return res.status(204).send();
   } catch (error) {
     return res
       .status(500)
       .json({ message: "Internal server error", error: error });
+  }
+}
+
+export async function testSlackNotification(req: Request, res: Response) {
+  try {
+    const { slackUserId, text } = req.body;
+
+    if (slackUserId !== undefined && typeof slackUserId !== "string") {
+      return res.status(400).json({ message: "Invalid slackUserId" });
+    }
+
+    if (text !== undefined && typeof text !== "string") {
+      return res.status(400).json({ message: "Invalid text" });
+    }
+
+    const recipientSlackUserId = slackUserId || getFallbackSlackUserId();
+
+    if (!recipientSlackUserId) {
+      return res.status(400).json({
+        message: "Missing slackUserId or SLACK_TEST_USER_ID",
+      });
+    }
+
+    await sendSlackDm(
+      recipientSlackUserId,
+      text || "Test från AI Incident Manager",
+    );
+
+    return res.status(200).json({ ok: true });
+  } catch (error) {
+    return res.status(500).json({
+      message: error instanceof Error ? error.message : "Internal server error",
+    });
   }
 }
