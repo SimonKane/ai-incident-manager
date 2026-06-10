@@ -12,6 +12,12 @@ const staffSchema = new Schema(
     },
     department: { type: String, required: true },
     organization: { type: String, required: true },
+    preferredNotification: {
+      type: [String],
+      enum: ["email", "phone", "sms", "slack"],
+      default: ["email"],
+      required: true,
+    },
   },
   { timestamps: false, collection: "staff" },
 );
