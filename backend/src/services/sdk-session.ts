@@ -3,12 +3,12 @@ import Anthropic from "@anthropic-ai/sdk";
 async function main() {
   const client = new Anthropic();
 
-  //   const session = await client.beta.sessions.create({
-  //     agent: "agent_01Amk4zNuR8FYkAuFoQ7AVNk",
-  //     environment_id: "env_01A8tTsg5JHdYNb1YrJRUuXA",
-  //     title: "Quickstart session",
-  //   });
-  //   console.log(`Session ID: ${session.id}`);
+  const session = await client.beta.sessions.create({
+    agent: "agent_01KaScu4BXH2xsH2XBsu61S7",
+    environment_id: "env_01T6ssvRjWnfrPUhrZGWgd1L",
+    title: "incident session",
+  });
+  console.log(`Session ID: ${session.id}`);
 
   const stream = await client.beta.sessions.events.stream(
     "sesn_017Gf7Ez99Dxk2SZ6Rxd8DMo",

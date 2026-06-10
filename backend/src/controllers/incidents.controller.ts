@@ -11,3 +11,10 @@ export async function getAllIncidents(req: Request, res: Response) {
     res.status(500).json({ message: "Internal server error", error: error });
   }
 }
+
+export async function analyzeIncident(req: Request, res: Response) {
+  try {
+  } catch (error) {
+    res.status(500).json({ message: "Internal server error", error: error });
+  }
+}
