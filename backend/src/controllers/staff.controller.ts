@@ -105,7 +105,9 @@ export async function updateStaff(req: Request, res: Response) {
     } = {};
 
     if (preferredNotification !== undefined) {
-      const notifications = normalizePreferredNotification(preferredNotification);
+      const notifications = normalizePreferredNotification(
+        preferredNotification,
+      );
 
       if (!hasValidNotifications(notifications)) {
         return res
@@ -157,11 +159,10 @@ export async function updateStaff(req: Request, res: Response) {
       });
     }
 
-    const staff = await Staff.findByIdAndUpdate(
-      req.params.id,
-      updates,
-      { returnDocument: "after", runValidators: true },
-    );
+    const staff = await Staff.findByIdAndUpdate(req.params.id, updates, {
+      returnDocument: "after",
+      runValidators: true,
+    });
 
     return res.status(200).json(staff);
   } catch (error) {
