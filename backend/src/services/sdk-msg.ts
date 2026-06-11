@@ -1,10 +1,10 @@
 import Anthropic from "@anthropic-ai/sdk";
 
-// Grundläggande API-anrop, ett meddelande
+// Basic API call, one message.
 
-// Kräver <export ANTHROPIC_API_KEY='your-api-key-here'> i t.ex ~/.zshrc eller ~/.bashrc
+// Requires <export ANTHROPIC_API_KEY='your-api-key-here'> in e.g. ~/.zshrc or ~/.bashrc.
 
-// Kör med "npx tsx src/services/sdk-msg.ts"
+// Run with "npx tsx src/services/sdk-msg.ts".
 
 async function main() {
   const anthropic = new Anthropic();
