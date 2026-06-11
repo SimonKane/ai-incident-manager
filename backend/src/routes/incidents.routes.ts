@@ -1,8 +1,12 @@
 import { Router } from "express";
-import { getAllIncidents } from "../controllers/incidents.controller";
+import {
+  getAllIncidents,
+  analyzeIncident,
+} from "../controllers/incidents.controller";
 
 const router = Router();
 
 router.get("/", getAllIncidents);
+router.post("/analyze", analyzeIncident);
 
 export default router;

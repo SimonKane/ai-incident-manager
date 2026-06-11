@@ -1,7 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
-import { IncidentType, Incident } from "../models/incident.model";
 import { Staff } from "../models/staff.model";
-import { connectDB } from "../config/database";
+import { IncidentType, Incident } from "../models/incident.model";
 import { Analyzed, AnalyzedType } from "../models/analyzedIncident.model";
 
 const client = new Anthropic();
@@ -44,14 +43,16 @@ const testdata3 = [
   "additionalEventData.DeleteMarkerCreated: false",
 ];
 
-async function normalize(data: any) {
+export async function normalize(data: any) {
   const session = await client.beta.sessions.create({
     agent: "agent_017DBieyHopJheGedyLijfDq",
     environment_id: "env_01XiGui8aQgwsben2ass7Vto",
-    title: `${Math.floor(1000000000 + Math.random() * 9000000000)}`,
+    title: `Incident ${Math.floor(10000 + Math.random() * 90000)}`,
   });
 
   const stream = await client.beta.sessions.events.stream(session.id);
+
+  console.log("normalize input:", JSON.stringify(data));
 
   await client.beta.sessions.events.send(session.id, {
     events: [
@@ -98,20 +99,15 @@ async function normalize(data: any) {
   return saved;
 }
 
-async function analyze(data: any) {
+export async function analyze(data: any) {
   try {
-    connectDB().catch(console.error);
-
     const incident = await normalize(data);
-
-    console.log(incident);
-
     const staff = await Staff.find({});
 
     const session = await client.beta.sessions.create({
       agent: "agent_01GhmDyyF5vmMhPqaoBWmGhQ",
       environment_id: "env_01XiGui8aQgwsben2ass7Vto",
-      title: `${Math.floor(1000000000 + Math.random() * 9000000000)}`,
+      title: `analyzed: ${incident.title}`,
     });
 
     const stream = await client.beta.sessions.events.stream(session.id);
@@ -157,11 +153,9 @@ async function analyze(data: any) {
     };
 
     await Analyzed.create({ ...analyzed });
-    console.log("done");
     return analyzed;
   } catch (error) {
-    console.error(error);
+    console.error("analyze failed:", error);
+    return undefined;
   }
 }
-
-analyze(testdata);
