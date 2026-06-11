@@ -1,7 +1,7 @@
 type IncidentDetailProps = {
   id: string;
   title: string;
-  severity: "Kritisk" | "Varning" | "Info";
+  severity: "Critical" | "Warning" | "Info";
   service: string;
   environment: string;
   timestamp: string;
@@ -17,7 +17,7 @@ type IncidentDetailProps = {
     id: string;
     title: string;
     timestamp: string;
-    status: "Väntar" | "Körande" | "Klar";
+    status: "Pending" | "Running" | "Done";
   }>;
   assignedTo: {
     name: string;
@@ -40,8 +40,8 @@ export default function IncidentDetail({
   onClose,
 }: IncidentDetailProps) {
   const severityColor = {
-    Kritisk: "text-red-400",
-    Varning: "text-yellow-400",
+    Critical: "text-red-400",
+    Warning: "text-yellow-400",
     Info: "text-blue-400",
   };
 
@@ -76,7 +76,7 @@ export default function IncidentDetail({
       <div className="space-y-4 overflow-y-auto pr-2">
         <div>
           <h3 className="text-sm font-semibold uppercase tracking-wider text-slate-400">
-            Specificerat fel
+            Specified error
           </h3>
           <p className="mt-2 text-sm leading-6 text-slate-300">
             {specifiedError}
@@ -85,7 +85,7 @@ export default function IncidentDetail({
 
         <div>
           <h3 className="text-sm font-semibold uppercase tracking-wider text-slate-400">
-            Åtgärdat
+            Recommended action
           </h3>
           <p className="mt-2 text-sm leading-6 text-slate-300">
             {remediation}
@@ -117,7 +117,7 @@ export default function IncidentDetail({
         {assignedTo && (
           <div>
             <h3 className="text-sm font-semibold uppercase tracking-wider text-slate-400">
-              Tilldelad
+              Assigned to
             </h3>
             <p className="mt-2 text-sm leading-6 text-slate-300">
               {assignedTo.name}
@@ -129,7 +129,7 @@ export default function IncidentDetail({
         {timeline.length > 0 && (
           <div>
             <h3 className="text-sm font-semibold uppercase tracking-wider text-slate-400">
-              Tidslinje
+              Timeline
             </h3>
             <div className="mt-3 space-y-3 border-l border-slate-800/50 pl-4">
               {timeline.map((event, idx) => (

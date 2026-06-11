@@ -1,177 +1,240 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Navbar from "../components/Navbar";
 import FilterButton from "../components/FilterButton";
 import IncidentCard from "../components/IncidentCard";
 import IncidentDetail from "../components/IncidentDetail";
 import StaffSettings from "../components/StaffSettings";
 
-const mockIncidents = [
-  {
-    id: "1",
-    title: "OOM crash loop i API-tjänst",
-    description: "AI upptäckte upprepade omstarter efter out-of-memory och ökade minnesgränsen via Lambda.",
-    severity: "Kritisk" as const,
-    service: "API Service",
-    environment: "Prod-EU",
-    timestamp: "02:14:21",
-    status: "Åtgärdad" as const,
-    specifiedError: "Container avslutades med OOMKilled efter tre crash loops inom fem minuter.",
-    remediation: "Lambda startade om tjänsten, ökade memory limit från 512 MB till 1024 MB och verifierade att felfrekvensen gick ner.",
-    timeline: [
-      { time: "02:14:21", title: "OOM crash loop upptäckt", description: "Serverloggen visade OOMKilled och täta container-restarts." },
-      { time: "02:14:27", title: "AI beslutade auto-fix", description: "Felet klassades som reversibel driftincident." },
-      { time: "02:14:35", title: "Lambda-åtgärd körd", description: "Tjänsten startades om och minnesgränsen höjdes." },
-      { time: "02:16:02", title: "Verifierad", description: "Inga nya crash loops och API svarar normalt." },
-    ],
-    actions: [
-      { id: "1", title: "Restart och memory scale-up via Lambda", timestamp: "Klar 02:14:35", status: "Klar" as const },
-    ],
-    assignedTo: null,
-  },
-  {
-    id: "2",
-    title: "Lagring nästan full",
-    description: "AI såg att disken passerade 88% och rensade temporära filer innan tjänsten började fallera.",
-    severity: "Varning" as const,
-    service: "File Service",
-    environment: "Prod-EU",
-    timestamp: "02:08:10",
-    status: "Åtgärdad" as const,
-    specifiedError: "Diskanvändning nådde 88% och loggar visade ökande skrivlatens.",
-    remediation: "Lambda rensade temp-kataloger, roterade gamla loggar och lämnade disken på 61%.",
-    timeline: [
-      { time: "02:08:10", title: "Varning identifierad", description: "Diskanvändning passerade nattgränsen på 85%." },
-      { time: "02:08:16", title: "Rensning startad", description: "Lambda tog bort temporära filer äldre än 24 timmar." },
-      { time: "02:09:04", title: "Loggar roterade", description: "Gamla app-loggar komprimerades och arkiverades." },
-      { time: "02:09:31", title: "Verifierad", description: "Diskanvändning nere på 61%." },
-    ],
-    actions: [
-      { id: "2", title: "Rensade tempfiler och roterade loggar", timestamp: "Klar 02:09:31", status: "Klar" as const },
-    ],
-    assignedTo: null,
-  },
-  {
-    id: "3",
-    title: "Misstänkt credential abuse",
-    description: "AI upptäckte onormal API-nyckelanvändning, spärrade nyckeln temporärt och tilldelade uppgiften till rätt tekniker.",
-    severity: "Kritisk" as const,
-    service: "Auth Service",
-    environment: "Prod-EU",
-    timestamp: "01:57:47",
-    status: "Eskalerad" as const,
-    specifiedError: "Samma API-nyckel användes från tre nya länder och anropade admin-endpoints 240 gånger på två minuter.",
-    remediation: "AI spärrade nyckeln temporärt, krävde token-rotation och skapade säkerhetsincident.",
-    timeline: [
-      { time: "01:57:47", title: "Avvikande credential-användning upptäckt", description: "API Gateway-loggar visade ovanlig geografi och endpoint-mix." },
-      { time: "01:57:52", title: "Containment startad", description: "Lambda spärrade API-nyckeln temporärt." },
-      { time: "01:58:05", title: "Uppgift tilldelad", description: "Alex Berg fick incidenten baserat på området backend/auth." },
-      { time: "01:58:22", title: "Bevakning höjd", description: "AI fortsätter följa auth- och gateway-loggar." },
-    ],
-    actions: [
-      { id: "3", title: "Spärrade API-nyckel och krävde rotation", timestamp: "Klar 01:57:52", status: "Klar" as const },
-    ],
-    assignedTo: {
-      name: "Alex Berg",
-      department: "backend",
-    },
-  },
-  {
-    id: "4",
-    title: "Unauthorized access-försök",
-    description: "AI såg upprepade 403-svar mot skyddade endpoints och blockerade käll-IP temporärt.",
-    severity: "Varning" as const,
-    service: "Admin Portal",
-    environment: "Prod-EU",
-    timestamp: "01:44:33",
-    status: "Eskalerad" as const,
-    specifiedError: "En okänd IP försökte nå admin-endpoints med saknade eller ogiltiga behörigheter.",
-    remediation: "Lambda blockerade IP-adressen i 30 minuter och tilldelade uppgiften för manuell granskning.",
-    timeline: [
-      { time: "01:44:33", title: "Unauthorized access mönster upptäckt", description: "Många 403-svar mot /admin och /settings." },
-      { time: "01:44:39", title: "IP blockerad", description: "Temporär regel lades till i WAF." },
-      { time: "01:44:51", title: "Uppgift tilldelad", description: "Nora Lind fick incidenten baserat på området devops/access." },
-    ],
-    actions: [
-      { id: "4", title: "Blockerade misstänkt IP via WAF-regel", timestamp: "Klar 01:44:39", status: "Klar" as const },
-    ],
-    assignedTo: {
-      name: "Nora Lind",
-      department: "devops",
-    },
-  },
-  {
-    id: "5",
-    title: "Rate spike mot API Gateway",
-    description: "AI upptäckte en kraftig trafikspik och aktiverade rate limiting innan felraten steg.",
-    severity: "Varning" as const,
-    service: "API Gateway",
-    environment: "Prod-EU",
-    timestamp: "01:31:02",
-    status: "Åtgärdad" as const,
-    specifiedError: "Request-volymen ökade från 120 till 1 900 requests/minut från samma klientgrupp.",
-    remediation: "Lambda aktiverade striktare rate limit och autoscaling höjde kapaciteten ett steg.",
-    timeline: [
-      { time: "01:31:02", title: "Rate spike upptäckt", description: "API Gateway-loggar visade 15x normal nattvolym." },
-      { time: "01:31:09", title: "Rate limit aktiverad", description: "Klientgruppen begränsades till säkrare nivå." },
-      { time: "01:31:35", title: "Kapacitet höjd", description: "Autoscaling ökade antal instanser." },
-      { time: "01:33:10", title: "Verifierad", description: "Felrate stabil och svarstider normala." },
-    ],
-    actions: [
-      { id: "5", title: "Aktiverade rate limit och skalade upp API-kapacitet", timestamp: "Klar 01:31:35", status: "Klar" as const },
-    ],
-    assignedTo: null,
-  },
-  {
-    id: "6",
-    title: "Möjlig data deletion",
-    description: "AI såg ovanligt många delete-operationer, pausade fortsatt radering och tilldelade uppgiften till databasansvarig.",
-    severity: "Kritisk" as const,
-    service: "Customer Data API",
-    environment: "Prod-EU",
-    timestamp: "01:12:29",
-    status: "Eskalerad" as const,
-    specifiedError: "DELETE-anrop mot kunddata ökade kraftigt från ett admin-konto utanför normalt underhållsfönster.",
-    remediation: "AI pausade delete-endpoints, tog snapshot-referens och tilldelade uppgiften för mänskligt beslut om återställning.",
-    timeline: [
-      { time: "01:12:29", title: "Ovanlig data deletion upptäckt", description: "Auditloggar visade 84 delete-operationer på tre minuter." },
-      { time: "01:12:34", title: "Fortsatt radering stoppad", description: "Lambda satte feature flag för delete-endpoints till read-only." },
-      { time: "01:12:49", title: "Snapshot säkrad", description: "Senaste backup och aktuell snapshot markerades för incidenten." },
-      { time: "01:13:02", title: "Uppgift tilldelad", description: "Maja Holm fick incidenten baserat på området database." },
-    ],
-    actions: [
-      { id: "6", title: "Pausade delete-endpoints och säkrade snapshot", timestamp: "Klar 01:12:49", status: "Klar" as const },
-    ],
-    assignedTo: {
-      name: "Maja Holm",
-      department: "database",
-    },
-  },
-];
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
+
+type AppTab = "incidents" | "settings";
+type Severity = "Critical" | "Warning" | "Info";
+type Status = "Resolved" | "Escalated" | "Pending";
+type Filter = "All" | "Critical" | "Warnings" | "Info";
+
+type DbIncident = {
+  _id?: string;
+  id?: string;
+  title: string;
+  description: string;
+  severity: string;
+  service: string;
+  environment: string;
+  timestamp: string;
+  status: string;
+  timeline?: Array<{
+    time: string;
+    title: string;
+    description?: string;
+  }>;
+  analysis?: {
+    type: string;
+    priority: string;
+    action: string;
+    target: string;
+    assignedTo: string;
+    assignedDepartment: string | null;
+    recommendation: string;
+  } | null;
+};
+
+type Incident = {
+  id: string;
+  title: string;
+  description: string;
+  severity: Severity;
+  service: string;
+  environment: string;
+  timestamp: string;
+  status: Status;
+  specifiedError: string;
+  remediation: string;
+  timeline: Array<{
+    time: string;
+    title: string;
+    description?: string;
+  }>;
+  actions: Array<{
+    id: string;
+    title: string;
+    timestamp: string;
+    status: "Pending" | "Running" | "Done";
+  }>;
+  assignedTo: {
+    name: string;
+    department: string;
+  } | null;
+};
+
+function formatTime(value: string) {
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) return value;
+
+  return new Intl.DateTimeFormat("sv-SE", {
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+  }).format(date);
+}
+
+function normalizeSeverity(severity: string): Severity {
+  const value = severity.toLowerCase();
+
+  if (
+    value.includes("krit") ||
+    value.includes("critical") ||
+    value.includes("high")
+  ) {
+    return "Critical";
+  }
+
+  if (
+    value.includes("varning") ||
+    value.includes("warning") ||
+    value.includes("medium")
+  ) {
+    return "Warning";
+  }
+
+  return "Info";
+}
+
+function normalizeStatus(status: string): Status {
+  const value = status
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+
+  if (value.includes("eskaler") || value.includes("escalat")) {
+    return "Escalated";
+  }
+
+  if (
+    value.includes("vant") ||
+    value.includes("pending") ||
+    value.includes("open")
+  ) {
+    return "Pending";
+  }
+
+  return "Resolved";
+}
+
+function hasAssignedTechnician(assignedTo?: string) {
+  if (!assignedTo) return false;
+
+  const value = assignedTo.trim().toLowerCase();
+  return value !== "" && value !== "none" && value !== "ingen";
+}
+
+function toIncident(incident: DbIncident): Incident {
+  const analysis = incident.analysis;
+  const id = incident.id || incident._id || crypto.randomUUID();
+  const hasAnalysisAction = Boolean(analysis?.action?.trim());
+
+  return {
+    id,
+    title: incident.title,
+    description: incident.description,
+    severity: normalizeSeverity(incident.severity),
+    service: incident.service,
+    environment: incident.environment,
+    timestamp: formatTime(incident.timestamp),
+    status: normalizeStatus(incident.status),
+    specifiedError: incident.description,
+    remediation:
+      analysis?.recommendation ||
+      analysis?.action ||
+      "No recommended action has been registered.",
+    timeline: (incident.timeline || []).map((event) => ({
+      ...event,
+      time: formatTime(event.time),
+    })),
+    actions: hasAnalysisAction
+      ? [
+          {
+            id: `${id}-action`,
+            title: analysis?.action || "",
+            timestamp: "AI action registered",
+            status: "Done",
+          },
+        ]
+      : [],
+    assignedTo:
+      analysis && hasAssignedTechnician(analysis.assignedTo)
+        ? {
+            name: analysis.assignedTo,
+            department: analysis.assignedDepartment || "Unknown department",
+          }
+        : null,
+  };
+}
 
 export default function Home() {
-  const [activeTab, setActiveTab] = useState<"incidents" | "settings">(
-    "incidents",
-  );
+  const [activeTab, setActiveTab] = useState<AppTab>("incidents");
   const [selectedIncident, setSelectedIncident] = useState<string | null>(null);
-  const [filter, setFilter] = useState<"Alla" | "Kritiska" | "Varningar" | "Info">("Alla");
+  const [filter, setFilter] = useState<Filter>("All");
+  const [incidents, setIncidents] = useState<Incident[]>([]);
+  const [isLoadingIncidents, setIsLoadingIncidents] = useState(true);
+  const [incidentError, setIncidentError] = useState<string | null>(null);
 
-  const incident = mockIncidents.find((i) => i.id === selectedIncident);
+  useEffect(() => {
+    const controller = new AbortController();
 
-  const filteredIncidents = mockIncidents.filter((i) => {
-    if (filter === "Alla") return true;
-    if (filter === "Kritiska") return i.severity === "Kritisk";
-    if (filter === "Varningar") return i.severity === "Varning";
+    async function loadIncidents() {
+      try {
+        setIsLoadingIncidents(true);
+        setIncidentError(null);
+
+        const response = await fetch(`${API_URL}/incidents`, {
+          signal: controller.signal,
+        });
+
+        if (!response.ok) throw new Error("Could not load incidents");
+
+        const data = (await response.json()) as DbIncident[];
+        const nextIncidents = data.map(toIncident);
+
+        setIncidents(nextIncidents);
+        setSelectedIncident((currentId) =>
+          nextIncidents.some((incident) => incident.id === currentId)
+            ? currentId
+            : null,
+        );
+      } catch (err) {
+        if (!controller.signal.aborted) {
+          setIncidentError(
+            err instanceof Error ? err.message : "Something went wrong",
+          );
+        }
+      } finally {
+        if (!controller.signal.aborted) setIsLoadingIncidents(false);
+      }
+    }
+
+    void loadIncidents();
+
+    return () => controller.abort();
+  }, []);
+
+  const incident = incidents.find((i) => i.id === selectedIncident);
+
+  const filteredIncidents = incidents.filter((i) => {
+    if (filter === "All") return true;
+    if (filter === "Critical") return i.severity === "Critical";
+    if (filter === "Warnings") return i.severity === "Warning";
     if (filter === "Info") return i.severity === "Info";
     return true;
   });
 
   const filterCounts = {
-    Alla: mockIncidents.length,
-    Kritiska: mockIncidents.filter((i) => i.severity === "Kritisk").length,
-    Varningar: mockIncidents.filter((i) => i.severity === "Varning").length,
-    Info: mockIncidents.filter((i) => i.severity === "Info").length,
+    All: incidents.length,
+    Critical: incidents.filter((i) => i.severity === "Critical").length,
+    Warnings: incidents.filter((i) => i.severity === "Warning").length,
+    Info: incidents.filter((i) => i.severity === "Info").length,
   };
 
   return (
@@ -179,32 +242,70 @@ export default function Home() {
       <Navbar activeTab={activeTab} onTabChange={setActiveTab} />
 
       {activeTab === "incidents" ? (
-        <main className="flex flex-1 flex-col gap-8 px-10 py-8 overflow-y-auto">
+        <main className="flex flex-1 flex-col gap-8 overflow-y-auto px-10 py-8">
           <div>
             <h1 className="text-3xl font-semibold text-slate-50">
-              Händelser
+              Incidents
             </h1>
             <p className="mt-2 text-sm text-slate-400">
-              AI-övervakade incidenter i realtid
+              AI-monitored incidents from the database
             </p>
           </div>
 
           <div className="flex gap-3">
-            <FilterButton label="Alla" count={filterCounts.Alla} active={filter === "Alla"} onClick={() => setFilter("Alla")} />
-            <FilterButton label="Kritiska" count={filterCounts.Kritiska} active={filter === "Kritiska"} onClick={() => setFilter("Kritiska")} />
-            <FilterButton label="Varningar" count={filterCounts.Varningar} active={filter === "Varningar"} onClick={() => setFilter("Varningar")} />
-            <FilterButton label="Info" count={filterCounts.Info} active={filter === "Info"} onClick={() => setFilter("Info")} />
+            <FilterButton
+              label="All"
+              count={filterCounts.All}
+              active={filter === "All"}
+              onClick={() => setFilter("All")}
+            />
+            <FilterButton
+              label="Critical"
+              count={filterCounts.Critical}
+              active={filter === "Critical"}
+              onClick={() => setFilter("Critical")}
+            />
+            <FilterButton
+              label="Warnings"
+              count={filterCounts.Warnings}
+              active={filter === "Warnings"}
+              onClick={() => setFilter("Warnings")}
+            />
+            <FilterButton
+              label="Info"
+              count={filterCounts.Info}
+              active={filter === "Info"}
+              onClick={() => setFilter("Info")}
+            />
           </div>
 
           <div className="space-y-3 pr-4">
-            {filteredIncidents.map((inc) => (
-              <IncidentCard
-                key={inc.id}
-                {...inc}
-                onClick={() => setSelectedIncident(inc.id === selectedIncident ? null : inc.id)}
-                isSelected={selectedIncident === inc.id}
-              />
-            ))}
+            {isLoadingIncidents ? (
+              <div className="rounded-2xl border border-slate-800/80 bg-slate-900/40 p-6 text-sm text-slate-400">
+                Loading incidents...
+              </div>
+            ) : incidentError ? (
+              <div className="rounded-2xl border border-red-900/40 bg-red-950/30 p-6 text-sm text-red-200">
+                {incidentError}
+              </div>
+            ) : filteredIncidents.length === 0 ? (
+              <div className="rounded-2xl border border-slate-800/80 bg-slate-900/40 p-6 text-sm text-slate-400">
+                No incidents found.
+              </div>
+            ) : (
+              filteredIncidents.map((inc) => (
+                <IncidentCard
+                  key={inc.id}
+                  {...inc}
+                  onClick={() =>
+                    setSelectedIncident(
+                      inc.id === selectedIncident ? null : inc.id,
+                    )
+                  }
+                  isSelected={selectedIncident === inc.id}
+                />
+              ))
+            )}
           </div>
         </main>
       ) : (
@@ -212,10 +313,7 @@ export default function Home() {
       )}
 
       {activeTab === "incidents" && incident && (
-        <IncidentDetail
-          {...incident}
-          onClose={() => setSelectedIncident(null)}
-        />
+        <IncidentDetail {...incident} onClose={() => setSelectedIncident(null)} />
       )}
     </div>
   );

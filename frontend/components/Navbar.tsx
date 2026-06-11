@@ -64,7 +64,7 @@ export default function RightNavbar({ activeTab, onTabChange }: NavbarProps) {
               <path d="M6 17h12" />
             </svg>
           </span>
-          Händelser
+          Incidents
         </button>
         <button
           type="button"
@@ -93,7 +93,7 @@ export default function RightNavbar({ activeTab, onTabChange }: NavbarProps) {
               <circle cx="12" cy="12" r="3" />
             </svg>
           </span>
-          Inställningar
+          Settings
         </button>
       </nav>
 
@@ -107,15 +107,15 @@ export default function RightNavbar({ activeTab, onTabChange }: NavbarProps) {
         </div>
         <div className="mt-4 space-y-3 text-xs text-slate-300">
           <div className="flex items-center justify-between">
-            <span>Atgardade idag</span>
+            <span>Resolved today</span>
             <span className="text-sm font-semibold text-slate-100">23</span>
           </div>
           <div className="flex items-center justify-between">
-            <span>MTTR (idag)</span>
+            <span>MTTR (today)</span>
             <span className="text-sm font-semibold text-slate-100">18m</span>
           </div>
           <div className="flex items-center justify-between">
-            <span>Upptackta fel</span>
+            <span>Detected issues</span>
             <span className="text-sm font-semibold text-slate-100">47</span>
           </div>
         </div>
@@ -126,7 +126,7 @@ export default function RightNavbar({ activeTab, onTabChange }: NavbarProps) {
             </span>
             <div>
               <p className="text-sm font-semibold text-slate-100">Acme Corp</p>
-              <p className="text-[11px] text-slate-400">Produktion</p>
+              <p className="text-[11px] text-slate-400">Production</p>
             </div>
           </div>
           <svg

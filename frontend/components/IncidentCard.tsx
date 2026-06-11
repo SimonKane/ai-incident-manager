@@ -2,23 +2,23 @@ type IncidentCardProps = {
   id: string;
   title: string;
   description: string;
-  severity: "Kritisk" | "Varning" | "Info";
+  severity: "Critical" | "Warning" | "Info";
   service: string;
   environment: string;
   timestamp: string;
-  status: "Åtgärdad" | "Eskalerad" | "Väntar";
+  status: "Resolved" | "Escalated" | "Pending";
   onClick: () => void;
   isSelected: boolean;
 };
 
 const severityConfig = {
-  Kritisk: {
+  Critical: {
     icon: "🔴",
     bgColor: "bg-red-950/50",
     textColor: "text-red-400",
     borderColor: "border-red-900/30",
   },
-  Varning: {
+  Warning: {
     icon: "⚠️",
     bgColor: "bg-yellow-950/50",
     textColor: "text-yellow-400",
@@ -33,14 +33,13 @@ const severityConfig = {
 };
 
 const statusConfig = {
-  Åtgärdad: "text-emerald-400",
-  Eskalerad: "text-purple-400",
-  Väntar: "text-slate-400",
+  Resolved: "text-emerald-400",
+  Escalated: "text-purple-400",
+  Pending: "text-slate-400",
 };
 
 export default function IncidentCard({
   title,
-  description,
   severity,
   service,
   environment,
@@ -85,7 +84,6 @@ export default function IncidentCard({
               {status}
             </span>
           </div>
-          <p className="mt-2 text-sm text-slate-300">{description}</p>
         </div>
       </div>
     </button>
