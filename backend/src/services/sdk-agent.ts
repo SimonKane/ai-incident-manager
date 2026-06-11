@@ -1,10 +1,10 @@
 import Anthropic from "@anthropic-ai/sdk";
 
-// Skapar en agent och en environment en gång, kan återanvändas, ändras och arkiveras i Claude Console (https://platform.claude.com/dashboard)
+// Creates an agent and environment once; they can be reused, changed, and archived in Claude Console (https://platform.claude.com/dashboard)
 
-// Gissningsvis mer kostnadseffektivt än att spec:a propmt alt initiera agent och environment varje gång
+// Likely more cost-effective than specifying the prompt or creating an agent and environment every time.
 
-// Kräver CLI och <export ANTHROPIC_API_KEY='your-api-key-here'> i t.ex ~/.zshrc eller ~/.bashrc
+// Requires CLI and <export ANTHROPIC_API_KEY='your-api-key-here'> in e.g. ~/.zshrc or ~/.bashrc.
 
 async function main() {
   const client = new Anthropic();

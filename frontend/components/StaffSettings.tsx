@@ -21,8 +21,8 @@ const notificationOptions: {
   value: PreferredNotification;
   label: string;
 }[] = [
-  { value: "email", label: "E-post" },
-  { value: "phone", label: "Telefon" },
+  { value: "email", label: "Email" },
+  { value: "phone", label: "Phone" },
   { value: "sms", label: "SMS" },
   { value: "slack", label: "Slack" },
 ];
@@ -89,7 +89,7 @@ export default function StaffSettings() {
       nextNotifications.includes("slack") &&
       !draftSlackUserId
     ) {
-      setListError("Fyll i Slack user ID innan Slack väljs.");
+      setListError("Enter a Slack user ID before selecting Slack.");
       setStaffIdsNeedingSlackUserId((currentIds) =>
         currentIds.includes(member._id)
           ? currentIds
@@ -119,13 +119,13 @@ export default function StaffSettings() {
           return;
         }
 
-        if (!response.ok) throw new Error("Kunde inte hämta tekniker");
+        if (!response.ok) throw new Error("Could not load technicians");
 
         const data = (await response.json()) as StaffMember[];
         setStaff(data);
       } catch (err) {
         if (!controller.signal.aborted) {
-          setListError(err instanceof Error ? err.message : "Något gick fel");
+          setListError(err instanceof Error ? err.message : "Something went wrong");
         }
       } finally {
         if (!controller.signal.aborted) setIsLoading(false);
@@ -141,14 +141,14 @@ export default function StaffSettings() {
     event.preventDefault();
 
     if (form.preferredNotification.length === 0) {
-      setFormError("Välj minst ett notifikationssätt");
+      setFormError("Select at least one notification method.");
       return;
     }
 
     const trimmedSlackUserId = form.slackUserId.trim();
 
     if (form.preferredNotification.includes("slack") && !trimmedSlackUserId) {
-      setFormError("Fyll i Slack user ID när Slack är valt.");
+      setFormError("Enter a Slack user ID when Slack is selected.");
       return;
     }
 
@@ -169,13 +169,13 @@ export default function StaffSettings() {
         body: JSON.stringify(staffPayload),
       });
 
-      if (!response.ok) throw new Error("Kunde inte lägga till tekniker");
+      if (!response.ok) throw new Error("Could not add technician");
 
       const createdStaff = (await response.json()) as StaffMember;
       setStaff((currentStaff) => [...currentStaff, createdStaff]);
       setForm(emptyForm);
     } catch (err) {
-      setFormError(err instanceof Error ? err.message : "Något gick fel");
+      setFormError(err instanceof Error ? err.message : "Something went wrong");
     } finally {
       setIsSaving(false);
     }
@@ -187,12 +187,12 @@ export default function StaffSettings() {
     slackUserId?: string,
   ) {
     if (preferredNotification.length === 0) {
-      setListError("Välj minst ett notifikationssätt");
+      setListError("Select at least one notification method.");
       return;
     }
 
     if (preferredNotification.includes("slack") && !slackUserId?.trim()) {
-      setListError("Fyll i Slack user ID innan Slack väljs.");
+      setListError("Enter a Slack user ID before selecting Slack.");
       return;
     }
 
@@ -224,7 +224,7 @@ export default function StaffSettings() {
         body: JSON.stringify(payload),
       });
 
-      if (!response.ok) throw new Error("Kunde inte uppdatera tekniker");
+      if (!response.ok) throw new Error("Could not update technician");
 
       const updatedStaff = (await response.json()) as StaffMember;
       setStaff((currentStaff) =>
@@ -237,7 +237,7 @@ export default function StaffSettings() {
         [staffId]: updatedStaff.slackUserId || "",
       }));
     } catch (err) {
-      setListError(err instanceof Error ? err.message : "Något gick fel");
+      setListError(err instanceof Error ? err.message : "Something went wrong");
     } finally {
       setUpdatingStaffIds((currentIds) =>
         currentIds.filter((currentId) => currentId !== staffId),
@@ -249,7 +249,7 @@ export default function StaffSettings() {
     const slackUserId = slackUserIdDrafts[member._id]?.trim();
 
     if (!slackUserId) {
-      setListError("Fyll i Slack user ID innan du sparar.");
+      setListError("Enter a Slack user ID before saving.");
       return;
     }
 
@@ -270,7 +270,7 @@ export default function StaffSettings() {
         }),
       });
 
-      if (!response.ok) throw new Error("Kunde inte uppdatera Slack user ID");
+      if (!response.ok) throw new Error("Could not update Slack user ID");
 
       const updatedStaff = (await response.json()) as StaffMember;
       setStaff((currentStaff) =>
@@ -286,7 +286,7 @@ export default function StaffSettings() {
         currentIds.filter((currentId) => currentId !== member._id),
       );
     } catch (err) {
-      setListError(err instanceof Error ? err.message : "Något gick fel");
+      setListError(err instanceof Error ? err.message : "Something went wrong");
     } finally {
       setUpdatingStaffIds((currentIds) =>
         currentIds.filter((currentId) => currentId !== member._id),
@@ -314,7 +314,7 @@ export default function StaffSettings() {
         body: JSON.stringify({ isOnVacation }),
       });
 
-      if (!response.ok) throw new Error("Kunde inte uppdatera status");
+      if (!response.ok) throw new Error("Could not update status");
 
       const updatedStaff = (await response.json()) as StaffMember;
       setStaff((currentStaff) =>
@@ -330,7 +330,7 @@ export default function StaffSettings() {
             : currentMember,
         ),
       );
-      setListError(err instanceof Error ? err.message : "Något gick fel");
+      setListError(err instanceof Error ? err.message : "Something went wrong");
     } finally {
       setUpdatingStaffIds((currentIds) =>
         currentIds.filter((currentId) => currentId !== member._id),
@@ -351,36 +351,38 @@ export default function StaffSettings() {
         method: "DELETE",
       });
 
-      if (!response.ok) throw new Error("Kunde inte ta bort tekniker");
+      if (!response.ok) throw new Error("Could not delete technician");
     } catch (err) {
       setStaff(previousStaff);
-      setListError(err instanceof Error ? err.message : "Något gick fel");
+      setListError(err instanceof Error ? err.message : "Something went wrong");
     }
   }
 
   return (
     <main className="flex flex-1 flex-col gap-8 overflow-y-auto px-10 py-8">
       <div>
-        <h1 className="text-3xl font-semibold text-slate-50">Inställningar</h1>
-        <p className="mt-2 text-sm text-slate-400">Tekniker och kontaktvägar</p>
+        <h1 className="text-3xl font-semibold text-slate-50">Settings</h1>
+        <p className="mt-2 text-sm text-slate-400">
+          Technicians and contact methods
+        </p>
       </div>
 
       <section className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
         <div className="overflow-hidden rounded-2xl border border-slate-800/80 bg-slate-950/60">
           <div className="grid grid-cols-[1.2fr_1.2fr_0.8fr_minmax(280px,1fr)_112px_56px] gap-3 border-b border-slate-800/80 px-5 py-3 text-xs font-semibold uppercase tracking-wide text-slate-500">
-            <span>Namn</span>
-            <span>E-post</span>
+            <span>Name</span>
+            <span>Email</span>
             <span>Team</span>
-            <span>Kontakt</span>
+            <span>Contact</span>
             <span className="text-center">Status</span>
             <span />
           </div>
 
           {isLoading ? (
-            <div className="px-5 py-8 text-sm text-slate-400">Laddar...</div>
+            <div className="px-5 py-8 text-sm text-slate-400">Loading...</div>
           ) : staff.length === 0 ? (
             <div className="px-5 py-8 text-sm text-slate-400">
-              Inga tekniker hittades.
+              No technicians found.
             </div>
           ) : (
             <div className="divide-y divide-slate-800/70">
@@ -469,7 +471,7 @@ export default function StaffSettings() {
                             onClick={() => updateMemberSlackUserId(member)}
                             className="inline-flex h-9 items-center justify-center rounded-lg bg-slate-900 px-3 text-xs font-semibold text-slate-300 ring-1 ring-slate-800 transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
                           >
-                            Spara
+                            Save
                           </button>
                         </div>
                       )}
@@ -479,22 +481,22 @@ export default function StaffSettings() {
                       type="button"
                       disabled={updatingStaffIds.includes(member._id)}
                       onClick={() => toggleStaffVacation(member)}
-                      className={`inline-flex h-9 w-28 items-center justify-center rounded-full px-3 text-xs font-semibold transition disabled:cursor-not-allowed disabled:opacity-70 ${
+                      className={`inline-flex h-9 w-28 items-center justify-center rounded-full px-3 text-xs cursor-pointer font-semibold transition disabled:cursor-not-allowed disabled:opacity-70 ${
                         member.isOnVacation
                           ? "bg-amber-500/15 text-amber-100 ring-1 ring-amber-400/30 hover:bg-amber-500/20"
                           : "bg-slate-900 text-slate-300 ring-1 ring-slate-800 hover:bg-slate-800/80"
                       }`}
                       aria-pressed={member.isOnVacation}
                     >
-                      {member.isOnVacation ? "Otillgänglig" : "Tillgänglig"}
+                      {member.isOnVacation ? "Unavailable" : "Available"}
                     </button>
                   </div>
                   <button
                     type="button"
                     onClick={() => deleteStaffMember(member._id)}
-                    className="inline-flex h-10 w-10 items-center justify-center rounded-xl text-slate-400 transition hover:bg-red-500/10 hover:text-red-300"
-                    aria-label={`Ta bort ${member.name}`}
-                    title="Ta bort"
+                    className="inline-flex h-10 w-10 items-center justify-center rounded-xl text-slate-400 cursor-pointer transition hover:bg-red-500/10 hover:text-red-300"
+                    aria-label={`Delete ${member.name}`}
+                    title="Delete"
                   >
                     <svg
                       viewBox="0 0 24 24"
@@ -530,12 +532,12 @@ export default function StaffSettings() {
           className="h-fit rounded-2xl border border-slate-800/80 bg-slate-950/60 p-5"
         >
           <h2 className="text-base font-semibold text-slate-100">
-            Lägg till tekniker
+            Add technician
           </h2>
 
           <div className="mt-5 space-y-4">
             <label className="block text-xs font-semibold text-slate-400">
-              Namn
+              Name
               <input
                 required
                 value={form.name}
@@ -549,7 +551,7 @@ export default function StaffSettings() {
               />
             </label>
             <label className="block text-xs font-semibold text-slate-400">
-              E-post
+              Email
               <input
                 required
                 type="email"
@@ -578,7 +580,7 @@ export default function StaffSettings() {
               />
             </label>
             <label className="block text-xs font-semibold text-slate-400">
-              Organisation
+              Organization
               <input
                 required
                 value={form.organization}
@@ -606,7 +608,7 @@ export default function StaffSettings() {
               />
             </label>
             <div className="block text-xs font-semibold text-slate-400">
-              Kontakt
+              Contact
               <div className="mt-2 flex flex-wrap gap-2">
                 {notificationOptions.map((option) =>
                   (() => {
@@ -671,7 +673,7 @@ export default function StaffSettings() {
             disabled={isSaving}
             className="mt-5 inline-flex h-11 w-full items-center justify-center rounded-xl bg-emerald-500 px-4 text-sm font-semibold text-slate-950 transition hover:bg-emerald-400 disabled:cursor-not-allowed disabled:opacity-60"
           >
-            {isSaving ? "Sparar..." : "Lägg till"}
+            {isSaving ? "Saving..." : "Add"}
           </button>
         </form>
       </section>

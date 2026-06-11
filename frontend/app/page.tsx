@@ -1,154 +1,311 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Navbar from "../components/Navbar";
 import FilterButton from "../components/FilterButton";
 import IncidentCard from "../components/IncidentCard";
 import IncidentDetail from "../components/IncidentDetail";
 import StaffSettings from "../components/StaffSettings";
 
-const mockIncidents = [
-  {
-    id: "1",
-    title: "Database connection timeout",
-    description: "AI-bedömning: Databaslutningen har högt sla på grund av hög belastning.",
-    severity: "Kritisk" as const,
-    service: "API Gateway",
-    environment: "Prod-EU",
-    timestamp: "14:32:21",
-    status: "Åtgärdad" as const,
-    timeline: [
-      { time: "14:32:21", title: "Händelse upptäckt", description: "Database connection timeout | API Gateway" },
-      { time: "14:32:23", title: "AI-analys klar", description: "AI identifierade trolig orsak och förslag åtgärd (92% konfidens)" },
-      { time: "14:32:25", title: "Åtgärd initierad", description: "Lambda-funktion restart_db_connection kördes" },
-      { time: "14:33:02", title: "Verifiering", description: "Anslutning återställd, felrate tillbaka till normal nivå" },
-    ],
-    actions: [
-      { id: "1", title: "Omstartade databasanslutning via Lambda: restart_db_connection", timestamp: "Started 14:32:25", status: "Klar" as const },
-    ],
-    relatedIncidents: [
-      { title: "API Gateway latency spike", service: "API Gateway" },
-      { title: "Database CPU high", service: "Database" },
-    ],
-  },
-  {
-    id: "2",
-    title: "High memory usage detected",
-    description: "En minnesläcka upptäcktes i User Service som orsakade hög belastning.",
-    severity: "Varning" as const,
-    service: "User Service",
-    environment: "Prod-EU",
-    timestamp: "14:28:10",
-    status: "Åtgärdad" as const,
-    timeline: [
-      { time: "14:28:10", title: "Varning identifierad" },
-      { time: "14:28:15", title: "AI-analysis klar" },
-    ],
-    actions: [],
-    relatedIncidents: [],
-  },
-  {
-    id: "3",
-    title: "Payment processing failed",
-    description: "Betalningsprocessering misslyckades för ett stort batch av transaktioner.",
-    severity: "Kritisk" as const,
-    service: "Payment Service",
-    environment: "Prod-EU",
-    timestamp: "14:25:47",
-    status: "Eskalerad" as const,
-    timeline: [],
-    actions: [],
-    relatedIncidents: [],
-  },
-  {
-    id: "4",
-    title: "File upload completed",
-    description: "En filuppladdning slutfördes utan problem.",
-    severity: "Info" as const,
-    service: "File Service",
-    environment: "Prod-EU",
-    timestamp: "14:20:33",
-    status: "Åtgärdad" as const,
-    timeline: [],
-    actions: [],
-    relatedIncidents: [],
-  },
-  {
-    id: "5",
-    title: "Rate limit approaching",
-    description: "API Gateway närmar sig rate limit för en av API-nycklarna.",
-    severity: "Varning" as const,
-    service: "API Gateway",
-    environment: "Prod-EU",
-    timestamp: "14:18:02",
-    status: "Åtgärdad" as const,
-    timeline: [],
-    actions: [],
-    relatedIncidents: [],
-  },
-  {
-    id: "6",
-    title: "Authentication failures",
-    description: "En ökning i autentiseringsfel identifierades.",
-    severity: "Kritisk" as const,
-    service: "Auth Service",
-    environment: "Prod-EU",
-    timestamp: "14:15:29",
-    status: "Eskalerad" as const,
-    timeline: [],
-    actions: [],
-    relatedIncidents: [],
-  },
-];
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
+
+type AppTab = "incidents" | "settings";
+type Severity = "Critical" | "Warning" | "Info";
+type Status = "Resolved" | "Escalated" | "Pending";
+type Filter = "All" | "Critical" | "Warnings" | "Info";
+
+type DbIncident = {
+  _id?: string;
+  id?: string;
+  title: string;
+  description: string;
+  severity: string;
+  service: string;
+  environment: string;
+  timestamp: string;
+  status: string;
+  timeline?: Array<{
+    time: string;
+    title: string;
+    description?: string;
+  }>;
+  analysis?: {
+    type: string;
+    priority: string;
+    action: string;
+    target: string;
+    assignedTo: string;
+    assignedDepartment: string | null;
+    recommendation: string;
+  } | null;
+};
+
+type Incident = {
+  id: string;
+  title: string;
+  description: string;
+  severity: Severity;
+  service: string;
+  environment: string;
+  timestamp: string;
+  status: Status;
+  specifiedError: string;
+  remediation: string;
+  timeline: Array<{
+    time: string;
+    title: string;
+    description?: string;
+  }>;
+  actions: Array<{
+    id: string;
+    title: string;
+    timestamp: string;
+    status: "Pending" | "Running" | "Done";
+  }>;
+  assignedTo: {
+    name: string;
+    department: string;
+  } | null;
+};
+
+function formatTime(value: string) {
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) return value;
+
+  return new Intl.DateTimeFormat("sv-SE", {
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+  }).format(date);
+}
+
+function normalizeSeverity(severity: string): Severity {
+  const value = severity.toLowerCase();
+
+  if (
+    value.includes("krit") ||
+    value.includes("critical") ||
+    value.includes("high")
+  ) {
+    return "Critical";
+  }
+
+  if (
+    value.includes("varning") ||
+    value.includes("warning") ||
+    value.includes("medium")
+  ) {
+    return "Warning";
+  }
+
+  return "Info";
+}
+
+function normalizeStatus(status: string): Status {
+  const value = status
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+
+  if (value.includes("eskaler") || value.includes("escalat")) {
+    return "Escalated";
+  }
+
+  if (
+    value.includes("vant") ||
+    value.includes("pending") ||
+    value.includes("open")
+  ) {
+    return "Pending";
+  }
+
+  return "Resolved";
+}
+
+function hasAssignedTechnician(assignedTo?: string) {
+  if (!assignedTo) return false;
+
+  const value = assignedTo.trim().toLowerCase();
+  return value !== "" && value !== "none" && value !== "ingen";
+}
+
+function toIncident(incident: DbIncident): Incident {
+  const analysis = incident.analysis;
+  const id = incident.id || incident._id || crypto.randomUUID();
+  const hasAnalysisAction = Boolean(analysis?.action?.trim());
+
+  return {
+    id,
+    title: incident.title,
+    description: incident.description,
+    severity: normalizeSeverity(incident.severity),
+    service: incident.service,
+    environment: incident.environment,
+    timestamp: formatTime(incident.timestamp),
+    status: normalizeStatus(incident.status),
+    specifiedError: incident.description,
+    remediation:
+      analysis?.recommendation ||
+      analysis?.action ||
+      "No recommended action has been registered.",
+    timeline: (incident.timeline || []).map((event) => ({
+      ...event,
+      time: formatTime(event.time),
+    })),
+    actions: hasAnalysisAction
+      ? [
+          {
+            id: `${id}-action`,
+            title: analysis?.action || "",
+            timestamp: "AI action registered",
+            status: "Done",
+          },
+        ]
+      : [],
+    assignedTo:
+      analysis && hasAssignedTechnician(analysis.assignedTo)
+        ? {
+            name: analysis.assignedTo,
+            department: analysis.assignedDepartment || "Unknown department",
+          }
+        : null,
+  };
+}
 
 export default function Home() {
-  const [activeTab, setActiveTab] = useState<"incidents" | "settings">(
-    "incidents",
-  );
+  const [activeTab, setActiveTab] = useState<AppTab>("incidents");
   const [selectedIncident, setSelectedIncident] = useState<string | null>(null);
-  const [filter, setFilter] = useState<"Alla" | "Kritiska" | "Varningar" | "Info">("Alla");
+  const [filter, setFilter] = useState<Filter>("All");
+  const [incidents, setIncidents] = useState<Incident[]>([]);
+  const [isLoadingIncidents, setIsLoadingIncidents] = useState(true);
+  const [incidentError, setIncidentError] = useState<string | null>(null);
 
-  const incident = mockIncidents.find((i) => i.id === selectedIncident);
+  useEffect(() => {
+    const controller = new AbortController();
 
-  const filteredIncidents = mockIncidents.filter((i) => {
-    if (filter === "Alla") return true;
-    if (filter === "Kritiska") return i.severity === "Kritisk";
-    if (filter === "Varningar") return i.severity === "Varning";
+    async function loadIncidents() {
+      try {
+        setIsLoadingIncidents(true);
+        setIncidentError(null);
+
+        const response = await fetch(`${API_URL}/incidents`, {
+          signal: controller.signal,
+        });
+
+        if (!response.ok) throw new Error("Could not load incidents");
+
+        const data = (await response.json()) as DbIncident[];
+        const nextIncidents = data.map(toIncident);
+
+        setIncidents(nextIncidents);
+        setSelectedIncident((currentId) =>
+          nextIncidents.some((incident) => incident.id === currentId)
+            ? currentId
+            : null,
+        );
+      } catch (err) {
+        if (!controller.signal.aborted) {
+          setIncidentError(
+            err instanceof Error ? err.message : "Something went wrong",
+          );
+        }
+      } finally {
+        if (!controller.signal.aborted) setIsLoadingIncidents(false);
+      }
+    }
+
+    void loadIncidents();
+
+    return () => controller.abort();
+  }, []);
+
+  const incident = incidents.find((i) => i.id === selectedIncident);
+
+  const filteredIncidents = incidents.filter((i) => {
+    if (filter === "All") return true;
+    if (filter === "Critical") return i.severity === "Critical";
+    if (filter === "Warnings") return i.severity === "Warning";
     if (filter === "Info") return i.severity === "Info";
     return true;
   });
+
+  const filterCounts = {
+    All: incidents.length,
+    Critical: incidents.filter((i) => i.severity === "Critical").length,
+    Warnings: incidents.filter((i) => i.severity === "Warning").length,
+    Info: incidents.filter((i) => i.severity === "Info").length,
+  };
 
   return (
     <div className="flex min-h-screen bg-slate-950 text-slate-100">
       <Navbar activeTab={activeTab} onTabChange={setActiveTab} />
 
       {activeTab === "incidents" ? (
-        <main className="flex flex-1 flex-col gap-8 px-10 py-8 overflow-y-auto">
+        <main className="flex flex-1 flex-col gap-8 overflow-y-auto px-10 py-8">
           <div>
             <h1 className="text-3xl font-semibold text-slate-50">
-              Händelser
+              Incidents
             </h1>
             <p className="mt-2 text-sm text-slate-400">
-              AI-övervakade incidenter i realtid
+              AI-monitored incidents from the database
             </p>
           </div>
 
           <div className="flex gap-3">
-            <FilterButton label="Alla" count={47} active={filter === "Alla"} onClick={() => setFilter("Alla")} />
-            <FilterButton label="Kritiska" count={12} active={filter === "Kritiska"} onClick={() => setFilter("Kritiska")} />
-            <FilterButton label="Varningar" count={18} active={filter === "Varningar"} onClick={() => setFilter("Varningar")} />
-            <FilterButton label="Info" count={17} active={filter === "Info"} onClick={() => setFilter("Info")} />
+            <FilterButton
+              label="All"
+              count={filterCounts.All}
+              active={filter === "All"}
+              onClick={() => setFilter("All")}
+            />
+            <FilterButton
+              label="Critical"
+              count={filterCounts.Critical}
+              active={filter === "Critical"}
+              onClick={() => setFilter("Critical")}
+            />
+            <FilterButton
+              label="Warnings"
+              count={filterCounts.Warnings}
+              active={filter === "Warnings"}
+              onClick={() => setFilter("Warnings")}
+            />
+            <FilterButton
+              label="Info"
+              count={filterCounts.Info}
+              active={filter === "Info"}
+              onClick={() => setFilter("Info")}
+            />
           </div>
 
           <div className="space-y-3 pr-4">
-            {filteredIncidents.map((inc) => (
-              <IncidentCard
-                key={inc.id}
-                {...inc}
-                onClick={() => setSelectedIncident(inc.id === selectedIncident ? null : inc.id)}
-                isSelected={selectedIncident === inc.id}
-              />
-            ))}
+            {isLoadingIncidents ? (
+              <div className="rounded-2xl border border-slate-800/80 bg-slate-900/40 p-6 text-sm text-slate-400">
+                Loading incidents...
+              </div>
+            ) : incidentError ? (
+              <div className="rounded-2xl border border-red-900/40 bg-red-950/30 p-6 text-sm text-red-200">
+                {incidentError}
+              </div>
+            ) : filteredIncidents.length === 0 ? (
+              <div className="rounded-2xl border border-slate-800/80 bg-slate-900/40 p-6 text-sm text-slate-400">
+                No incidents found.
+              </div>
+            ) : (
+              filteredIncidents.map((inc) => (
+                <IncidentCard
+                  key={inc.id}
+                  {...inc}
+                  onClick={() =>
+                    setSelectedIncident(
+                      inc.id === selectedIncident ? null : inc.id,
+                    )
+                  }
+                  isSelected={selectedIncident === inc.id}
+                />
+              ))
+            )}
           </div>
         </main>
       ) : (
@@ -156,10 +313,7 @@ export default function Home() {
       )}
 
       {activeTab === "incidents" && incident && (
-        <IncidentDetail
-          {...incident}
-          onClose={() => setSelectedIncident(null)}
-        />
+        <IncidentDetail {...incident} onClose={() => setSelectedIncident(null)} />
       )}
     </div>
   );

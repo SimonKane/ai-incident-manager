@@ -97,12 +97,56 @@ export async function createStaff(req: Request, res: Response) {
 
 export async function updateStaff(req: Request, res: Response) {
   try {
-    const { preferredNotification, isOnVacation, slackUserId } = req.body;
+    const {
+      name,
+      email,
+      department,
+      organization,
+      preferredNotification,
+      isOnVacation,
+      slackUserId,
+    } = req.body;
     const updates: {
+      name?: string;
+      email?: string;
+      department?: string;
+      organization?: string;
       preferredNotification?: string[];
       isOnVacation?: boolean;
       slackUserId?: string;
     } = {};
+
+    if (name !== undefined) {
+      if (typeof name !== "string" || !name.trim()) {
+        return res.status(400).json({ message: "Invalid name" });
+      }
+
+      updates.name = name.trim();
+    }
+
+    if (email !== undefined) {
+      if (typeof email !== "string" || !email.trim()) {
+        return res.status(400).json({ message: "Invalid email" });
+      }
+
+      updates.email = email.trim().toLowerCase();
+    }
+
+    if (department !== undefined) {
+      if (typeof department !== "string" || !department.trim()) {
+        return res.status(400).json({ message: "Invalid department" });
+      }
+
+      updates.department = department.trim();
+    }
+
+    if (organization !== undefined) {
+      if (typeof organization !== "string" || !organization.trim()) {
+        return res.status(400).json({ message: "Invalid organization" });
+      }
+
+      updates.organization = organization.trim();
+    }
 
     if (preferredNotification !== undefined) {
       const notifications = normalizePreferredNotification(
@@ -181,10 +225,14 @@ export async function deleteStaff(req: Request, res: Response) {
     const slackUserId = staff.slackUserId || getFallbackSlackUserId();
 
     if (slackUserId) {
-      await sendSlackDm(
-        slackUserId,
-        `Test från AI Incident Manager: ${staff.name} togs bort.`,
-      );
+      try {
+        await sendSlackDm(
+          slackUserId,
+          `Test from AI Incident Manager: ${staff.name} was deleted.`,
+        );
+      } catch (error) {
+        console.error("Failed to send staff deletion Slack notification:", error);
+      }
     }
 
     return res.status(204).send();
@@ -217,7 +265,7 @@ export async function testSlackNotification(req: Request, res: Response) {
 
     await sendSlackDm(
       recipientSlackUserId,
-      text || "Test från AI Incident Manager",
+      text || "Test from AI Incident Manager",
     );
 
     return res.status(200).json({ ok: true });
