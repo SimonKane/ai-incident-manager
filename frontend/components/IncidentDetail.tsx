@@ -6,6 +6,8 @@ type IncidentDetailProps = {
   environment: string;
   timestamp: string;
   description: string;
+  specifiedError: string;
+  remediation: string;
   timeline: Array<{
     time: string;
     title: string;
@@ -17,10 +19,10 @@ type IncidentDetailProps = {
     timestamp: string;
     status: "Väntar" | "Körande" | "Klar";
   }>;
-  relatedIncidents: Array<{
-    title: string;
-    service: string;
-  }>;
+  assignedTo: {
+    name: string;
+    department: string;
+  } | null;
   onClose: () => void;
 };
 
@@ -30,10 +32,11 @@ export default function IncidentDetail({
   service,
   environment,
   timestamp,
-  description,
+  specifiedError,
+  remediation,
   timeline,
   actions,
-  relatedIncidents,
+  assignedTo,
   onClose,
 }: IncidentDetailProps) {
   const severityColor = {
@@ -47,7 +50,7 @@ export default function IncidentDetail({
       <button
         type="button"
         onClick={onClose}
-        className="absolute right-4 top-4 text-slate-400 hover:text-slate-200"
+        className="absolute right-4 top-4 cursor-pointer text-slate-400 hover:text-slate-200"
       >
         ✕
       </button>
@@ -73,16 +76,22 @@ export default function IncidentDetail({
       <div className="space-y-4 overflow-y-auto pr-2">
         <div>
           <h3 className="text-sm font-semibold uppercase tracking-wider text-slate-400">
-            AI-analys
+            Specificerat fel
           </h3>
-          <p className="mt-2 text-sm leading-6 text-slate-300">{description}</p>
+          <p className="mt-2 text-sm leading-6 text-slate-300">
+            {specifiedError}
+          </p>
         </div>
 
-        {actions.length > 0 && (
-          <div>
-            <h3 className="text-sm font-semibold uppercase tracking-wider text-slate-400">
-              Åtgärd som utfördes
-            </h3>
+        <div>
+          <h3 className="text-sm font-semibold uppercase tracking-wider text-slate-400">
+            Åtgärdat
+          </h3>
+          <p className="mt-2 text-sm leading-6 text-slate-300">
+            {remediation}
+          </p>
+
+          {actions.length > 0 && (
             <div className="mt-3 space-y-3">
               {actions.map((action) => (
                 <div
@@ -102,6 +111,18 @@ export default function IncidentDetail({
                 </div>
               ))}
             </div>
+          )}
+        </div>
+
+        {assignedTo && (
+          <div>
+            <h3 className="text-sm font-semibold uppercase tracking-wider text-slate-400">
+              Tilldelad
+            </h3>
+            <p className="mt-2 text-sm leading-6 text-slate-300">
+              {assignedTo.name}
+              <span className="text-slate-500"> • {assignedTo.department}</span>
+            </p>
           </div>
         )}
 
@@ -125,35 +146,6 @@ export default function IncidentDetail({
                   )}
                 </div>
               ))}
-            </div>
-          </div>
-        )}
-
-        {relatedIncidents.length > 0 && (
-          <div>
-            <h3 className="text-sm font-semibold uppercase tracking-wider text-slate-400">
-              Relaterade händelser
-            </h3>
-            <div className="mt-3 space-y-2">
-              {relatedIncidents.map((incident, idx) => (
-                <a
-                  key={idx}
-                  href="#"
-                  className="block text-sm text-slate-300 hover:text-emerald-300"
-                >
-                  {incident.title}
-                  <span className="text-xs text-slate-500">
-                    {" "}
-                    • {incident.service}
-                  </span>
-                </a>
-              ))}
-              <a
-                href="#"
-                className="mt-2 block text-sm text-emerald-400 hover:text-emerald-300"
-              >
-                Visa alla →
-              </a>
             </div>
           </div>
         )}
