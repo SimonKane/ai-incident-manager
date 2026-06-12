@@ -46,7 +46,7 @@ export default function IncidentDetail({
   };
 
   return (
-    <div className="sticky top-0 flex h-screen w-96 flex-col gap-6 border-l border-slate-800/80 bg-slate-950 px-6 py-8 text-slate-100 shadow-[-10px_0_30px_rgba(0,0,0,0.5)]">
+    <div className="sticky top-0 flex h-screen w-96 flex-col gap-6 border-l border-slate-800/80 bg-slate-950 px-6 py-8 text-slate-100 ">
       <button
         type="button"
         onClick={onClose}
@@ -58,9 +58,9 @@ export default function IncidentDetail({
       <div>
         <h2 className="text-2xl font-semibold text-slate-50">{title}</h2>
         <p className="mt-2 text-sm text-slate-400">{timestamp}</p>
-        <div className="mt-3 flex gap-2">
+        <div className="mt-3 flex gap-2 overflow-x-scroll h-10">
           <span
-            className={`rounded-full bg-slate-900/80 px-3 py-1 text-xs font-semibold ${severityColor[severity]}`}
+            className={`rounded-sm flex items-center bg-slate-900/80 px-2 py-1 text-xs font-semibold ${severityColor[severity]}`}
           >
             {severity}
           </span>
@@ -87,9 +87,7 @@ export default function IncidentDetail({
           <h3 className="text-sm font-semibold uppercase tracking-wider text-slate-400">
             Recommended action
           </h3>
-          <p className="mt-2 text-sm leading-6 text-slate-300">
-            {remediation}
-          </p>
+          <p className="mt-2 text-sm leading-6 text-slate-300">{remediation}</p>
 
           {actions.length > 0 && (
             <div className="mt-3 space-y-3">

@@ -15,7 +15,7 @@ type StaffMember = {
   slackUserId?: string;
 };
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
 
 const notificationOptions: {
   value: PreferredNotification;
@@ -125,7 +125,9 @@ export default function StaffSettings() {
         setStaff(data);
       } catch (err) {
         if (!controller.signal.aborted) {
-          setListError(err instanceof Error ? err.message : "Something went wrong");
+          setListError(
+            err instanceof Error ? err.message : "Something went wrong",
+          );
         }
       } finally {
         if (!controller.signal.aborted) setIsLoading(false);
