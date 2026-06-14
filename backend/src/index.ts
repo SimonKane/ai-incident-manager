@@ -9,6 +9,7 @@ import cron from "node-cron";
 import { sendAlert, alerts } from "./utils/scripts/ingestion";
 
 import { connectDB } from "./config/database";
+import { Staff } from "./models/staff.model";
 import staffRoutes from "./routes/staff.routes";
 import incidentRoutes from "./routes/incidents.routes";
 
@@ -45,16 +46,48 @@ app.get("/", (_req, res) => {
   res.send("Server running");
 });
 
-// Skickar slumpmässig alert från alerts[]
-// i utils/scripts/ingestion.ts var 5e min.
-// Byt 5 mot annan siffra för att ändra minutintervall
-cron.schedule("*/5 * * * *", async () => {
-  const alert = alerts[Math.floor(Math.random() * alerts.length)];
-  await sendAlert(alert);
-});
+async function sendInitialAssignedAlerts() {
+  const availableStaff = await Staff.find({ isOnVacation: false })
+    .sort({ name: 1 })
+    .limit(3)
+    .lean();
 
-httpServer.listen(PORT, "0.0.0.0", () => {
-  console.log(`Server running on port ${PORT}`);
-});
+  if (availableStaff.length < 3) {
+    console.log(
+      `Skipping initial alerts: found ${availableStaff.length} available staff members`,
+    );
+    return;
+  }
 
-connectDB().catch(console.error);
+  for (const [index, staffMember] of availableStaff.entries()) {
+    await sendAlert({
+      ...alerts[index],
+      assignedTo: staffMember.name,
+    });
+  }
+}
+
+function scheduleRecurringAlerts() {
+  // Skickar slumpmässig alert från alerts[]
+  // i utils/scripts/ingestion.ts var 5e min.
+  // Byt 5 mot annan siffra för att ändra minutintervall
+  cron.schedule("*/5 * * * *", async () => {
+    const alert = alerts[Math.floor(Math.random() * alerts.length)];
+    await sendAlert(alert);
+  });
+}
+
+async function startServer() {
+  await connectDB();
+
+  httpServer.listen(PORT, "0.0.0.0", () => {
+    console.log(`Server running on port ${PORT}`);
+    scheduleRecurringAlerts();
+    void sendInitialAssignedAlerts();
+  });
+}
+
+startServer().catch((error) => {
+  console.error(error);
+  process.exit(1);
+});
