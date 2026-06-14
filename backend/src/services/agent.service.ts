@@ -1,47 +1,10 @@
 import Anthropic from "@anthropic-ai/sdk";
+import { io } from "../index";
 import { Staff } from "../models/staff.model";
 import { IncidentType, Incident } from "../models/incident.model";
 import { Analyzed, AnalyzedType } from "../models/analyzedIncident.model";
 
 const client = new Anthropic();
-
-const testdata = {
-  ALARM: `"prod-api-latency" in us-east-1`,
-  StateChangeTime: "2026-06-10T08:23:11.000Z",
-  OldStateValue: "OK",
-  NewStateValue: "ALARM",
-  Threshold: "2000ms",
-  MetricName: "Latency",
-  Namespace: "AWS/ApiGateway",
-  Dimensions: "Stage=prod, ApiName=user-service",
-  EvaluationPeriods: 3,
-  DatapointsToAlarm: 3,
-  CurrentValue: "8743ms",
-};
-
-const testdata2 = [
-  "2026-06-10T09:12:03Z [ERROR] container exited with code 137 (OOMKilled)",
-  "2026-06-10T09:12:04Z Task arn:aws:ecs:us-east-1:123456789012:task/prod/a3f9c stopped",
-  "2026-06-10T09:12:10Z [INFO] Starting replacement task...",
-  "2026-06-10T09:12:44Z [ERROR] container exited with code 137 (OOMKilled)",
-  "2026-06-10T09:12:45Z Task arn:aws:ecs:us-east-1:123456789012:task/prod/b7d2e stopped",
-  "2026-06-10T09:12:51Z [INFO] Starting replacement task...",
-  "2026-06-10T09:13:22Z [ERROR] container exited with code 137 (OOMKilled)",
-  "Service: payment-processor | Cluster: prod-cluster | Desired: 3 | Running: 0",
-];
-
-const testdata3 = [
-  "eventTime: 2026-06-10T05:30:01Z",
-  "eventName: DeleteBucket",
-  "eventSource: s3.amazonaws.com",
-  "userIdentity.type: IAMUser",
-  "userIdentity.userName: temp-contractor-04",
-  "requestParameters.bucketName: prod-customer-exports",
-  "sourceIPAddress: 203.0.113.77",
-  "userAgent: aws-cli/2.9.0",
-  "errorCode: (none)",
-  "additionalEventData.DeleteMarkerCreated: false",
-];
 
 export async function normalize(data: any) {
   const session = await client.beta.sessions.create({
@@ -51,8 +14,6 @@ export async function normalize(data: any) {
   });
 
   const stream = await client.beta.sessions.events.stream(session.id);
-
-  console.log("normalize input:", JSON.stringify(data));
 
   await client.beta.sessions.events.send(session.id, {
     events: [
@@ -79,11 +40,14 @@ export async function normalize(data: any) {
       break;
     }
   }
+
   const cleaned = response
     .trim()
     .replace(/^```(?:json)?\s*/, "")
     .replace(/\s*```$/, "");
+
   const normalized = JSON.parse(cleaned);
+
   const incident: Omit<IncidentType, "_id"> = {
     title: normalized.title,
     description: normalized.description,
@@ -140,6 +104,7 @@ export async function analyze(data: any) {
       .trim()
       .replace(/^```(?:json)?\s*/, "")
       .replace(/\s*```$/, "");
+
     const normalized = JSON.parse(cleaned);
 
     const analyzed: Omit<AnalyzedType, "_id"> = {
@@ -153,9 +118,15 @@ export async function analyze(data: any) {
     };
 
     await Analyzed.create({ ...analyzed });
+
+    io.emit("incident:processed", {
+      incident,
+      analyzed,
+    });
+
     return analyzed;
   } catch (error) {
-    console.error("analyze failed:", error);
+    console.error("Analysis failed:", error);
     return undefined;
   }
 }

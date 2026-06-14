@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
 import { Analyzed } from "../models/analyzedIncident.model";
 import { Staff } from "../models/staff.model";
-import { analyze } from "../services/agent";
+import { analyze } from "../services/agent.service";
 
 export async function getAllIncidents(_req: Request, res: Response) {
   try {
@@ -58,9 +58,7 @@ export async function getAllIncidents(_req: Request, res: Response) {
 
 export async function analyzeIncident(req: Request, res: Response) {
   try {
-    console.log("req.body:", req.body);
-    const { inData } = req.body;
-    const incident = await analyze(inData);
+    const incident = await analyze(req.body);
 
     if (!incident) throw new Error("Failed to run analysis");
 

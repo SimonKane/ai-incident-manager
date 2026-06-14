@@ -1,13 +1,14 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import socket from "@/lib/socket";
 import Navbar from "../components/Navbar";
 import FilterButton from "../components/FilterButton";
 import IncidentCard from "../components/IncidentCard";
 import IncidentDetail from "../components/IncidentDetail";
 import StaffSettings from "../components/StaffSettings";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
+const API_URL = "http://localhost:3000";
 
 type AppTab = "incidents" | "settings";
 type Severity = "Critical" | "Warning" | "Info";
@@ -217,7 +218,15 @@ export default function Home() {
 
     void loadIncidents();
 
-    return () => controller.abort();
+    socket.on("incident:processed", (data) => {
+      const newIncident = toIncident(data.incident);
+      setIncidents((prev) => [newIncident, ...prev]);
+    });
+
+    return () => {
+      controller.abort();
+      socket.off("incident:processed");
+    };
   }, []);
 
   const incident = incidents.find((i) => i.id === selectedIncident);
@@ -244,9 +253,7 @@ export default function Home() {
       {activeTab === "incidents" ? (
         <main className="flex flex-1 flex-col gap-8 overflow-y-auto px-10 py-8">
           <div>
-            <h1 className="text-3xl font-semibold text-slate-50">
-              Incidents
-            </h1>
+            <h1 className="text-3xl font-semibold text-slate-50">Incidents</h1>
             <p className="mt-2 text-sm text-slate-400">
               AI-monitored incidents from the database
             </p>
@@ -313,7 +320,10 @@ export default function Home() {
       )}
 
       {activeTab === "incidents" && incident && (
-        <IncidentDetail {...incident} onClose={() => setSelectedIncident(null)} />
+        <IncidentDetail
+          {...incident}
+          onClose={() => setSelectedIncident(null)}
+        />
       )}
     </div>
   );
