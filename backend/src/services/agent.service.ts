@@ -66,7 +66,7 @@ export async function normalize(data: any) {
 export async function analyze(data: any) {
   try {
     const incident = await normalize(data);
-    const staff = await Staff.find({});
+    const staff = await Staff.find({ isOnVacation: false });
 
     const session = await client.beta.sessions.create({
       agent: "agent_01GhmDyyF5vmMhPqaoBWmGhQ",
@@ -106,13 +106,27 @@ export async function analyze(data: any) {
       .replace(/\s*```$/, "");
 
     const normalized = JSON.parse(cleaned);
+    const forcedAssignedStaff =
+      typeof data.assignedTo === "string"
+        ? staff.find(
+            (staffMember) =>
+              staffMember.name.trim().toLowerCase() ===
+              data.assignedTo.trim().toLowerCase(),
+          )
+        : undefined;
+    const assignedTo = forcedAssignedStaff?.name || normalized.assignedTo;
+    const assignedStaff = staff.find(
+      (staffMember) =>
+        staffMember.name.trim().toLowerCase() ===
+        assignedTo.trim().toLowerCase(),
+    );
 
     const analyzed: Omit<AnalyzedType, "_id"> = {
       type: normalized.type,
       priority: normalized.priority,
       action: normalized.action,
       target: normalized.target,
-      assignedTo: normalized.assignedTo,
+      assignedTo,
       recommendation: normalized.recommendation,
       incident: incident._id,
     };
@@ -120,7 +134,23 @@ export async function analyze(data: any) {
     await Analyzed.create({ ...analyzed });
 
     io.emit("incident:processed", {
-      incident,
+      incident: {
+        ...incident.toObject(),
+        id: incident._id.toString(),
+        analysis: {
+          type: analyzed.type,
+          priority: analyzed.priority,
+          action: analyzed.action,
+          target: analyzed.target,
+          assignedTo: analyzed.assignedTo,
+          assignedDepartment: assignedStaff?.department ?? null,
+          assignedStaffId: assignedStaff?._id?.toString() ?? null,
+          assignedPhoneNumber: assignedStaff?.phoneNumber ?? null,
+          assignedNotificationMethods:
+            assignedStaff?.preferredNotification ?? [],
+          recommendation: analyzed.recommendation,
+        },
+      },
       analyzed,
     });
 

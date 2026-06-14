@@ -131,8 +131,13 @@ Dependent services: api-gateway, payment-service, notification-service, auth-ser
   },
 ];
 
-export async function sendAlert(alert: (typeof alerts)[0]) {
-  const res = await fetch("http://localhost:3000/incidents/analyze", {
+export type AlertPayload = (typeof alerts)[number] & {
+  assignedTo?: string;
+};
+
+export async function sendAlert(alert: AlertPayload) {
+  const port = process.env.PORT || "3000";
+  const res = await fetch(`http://localhost:${port}/incidents/analyze`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(alert),

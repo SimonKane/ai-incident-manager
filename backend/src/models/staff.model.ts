@@ -10,6 +10,7 @@ const staffSchema = new Schema(
       lowercase: true,
       trim: true,
     },
+    phoneNumber: { type: String, required: false, trim: true },
     department: { type: String, required: true },
     organization: { type: String, required: true },
     preferredNotification: {

@@ -42,6 +42,7 @@ export async function createStaff(req: Request, res: Response) {
     const {
       name,
       email,
+      phoneNumber,
       department,
       organization,
       preferredNotification,
@@ -53,6 +54,10 @@ export async function createStaff(req: Request, res: Response) {
       return res.status(400).json({
         message: "name, email, department and organization are required",
       });
+    }
+
+    if (phoneNumber !== undefined && typeof phoneNumber !== "string") {
+      return res.status(400).json({ message: "Invalid phoneNumber" });
     }
 
     if (typeof isOnVacation !== "boolean") {
@@ -70,6 +75,7 @@ export async function createStaff(req: Request, res: Response) {
     }
 
     const normalizedSlackUserId = normalizeSlackUserId(slackUserId);
+    const normalizedPhoneNumber = phoneNumber?.trim();
 
     if (notifications.includes("slack") && !normalizedSlackUserId) {
       return res.status(400).json({
@@ -77,9 +83,16 @@ export async function createStaff(req: Request, res: Response) {
       });
     }
 
+    if (notifications.includes("sms") && !normalizedPhoneNumber) {
+      return res.status(400).json({
+        message: "phoneNumber is required when SMS is selected",
+      });
+    }
+
     const staff = await Staff.create({
       name,
       email,
+      phoneNumber: normalizedPhoneNumber,
       department,
       organization,
       preferredNotification: notifications,
@@ -100,6 +113,7 @@ export async function updateStaff(req: Request, res: Response) {
     const {
       name,
       email,
+      phoneNumber,
       department,
       organization,
       preferredNotification,
@@ -109,6 +123,7 @@ export async function updateStaff(req: Request, res: Response) {
     const updates: {
       name?: string;
       email?: string;
+      phoneNumber?: string;
       department?: string;
       organization?: string;
       preferredNotification?: string[];
@@ -130,6 +145,14 @@ export async function updateStaff(req: Request, res: Response) {
       }
 
       updates.email = email.trim().toLowerCase();
+    }
+
+    if (phoneNumber !== undefined) {
+      if (typeof phoneNumber !== "string") {
+        return res.status(400).json({ message: "Invalid phoneNumber" });
+      }
+
+      updates.phoneNumber = phoneNumber.trim();
     }
 
     if (department !== undefined) {
@@ -196,10 +219,20 @@ export async function updateStaff(req: Request, res: Response) {
       updates.slackUserId !== undefined
         ? updates.slackUserId
         : existingStaff.slackUserId;
+    const nextPhoneNumber =
+      updates.phoneNumber !== undefined
+        ? updates.phoneNumber
+        : existingStaff.phoneNumber;
 
     if (nextNotifications.includes("slack") && !nextSlackUserId) {
       return res.status(400).json({
         message: "slackUserId is required when Slack is selected",
+      });
+    }
+
+    if (nextNotifications.includes("sms") && !nextPhoneNumber) {
+      return res.status(400).json({
+        message: "phoneNumber is required when SMS is selected",
       });
     }
 
