@@ -8,6 +8,7 @@ type StaffMember = {
   _id: string;
   name: string;
   email: string;
+  phoneNumber?: string;
   department: string;
   organization: string;
   preferredNotification?: PreferredNotification | PreferredNotification[];
@@ -30,11 +31,21 @@ const notificationOptions: {
 const emptyForm = {
   name: "",
   email: "",
+  phoneNumber: "",
   department: "",
   organization: "Acme",
   preferredNotification: ["email"] as PreferredNotification[],
   slackUserId: "",
 };
+
+async function getResponseError(response: Response, fallbackMessage: string) {
+  try {
+    const data = (await response.json()) as { message?: string };
+    return data.message || fallbackMessage;
+  } catch {
+    return fallbackMessage;
+  }
+}
 
 export default function StaffSettings() {
   const [staff, setStaff] = useState<StaffMember[]>([]);
@@ -83,6 +94,16 @@ export default function StaffSettings() {
 
     const draftSlackUserId =
       slackUserIdDrafts[member._id]?.trim() || member.slackUserId?.trim();
+    const phoneNumber = member.phoneNumber?.trim();
+
+    if (
+      notification === "sms" &&
+      nextNotifications.includes("sms") &&
+      !phoneNumber
+    ) {
+      setListError("Add a phone number before selecting SMS.");
+      return;
+    }
 
     if (
       notification === "slack" &&
@@ -148,9 +169,15 @@ export default function StaffSettings() {
     }
 
     const trimmedSlackUserId = form.slackUserId.trim();
+    const trimmedPhoneNumber = form.phoneNumber.trim();
 
     if (form.preferredNotification.includes("slack") && !trimmedSlackUserId) {
       setFormError("Enter a Slack user ID when Slack is selected.");
+      return;
+    }
+
+    if (form.preferredNotification.includes("sms") && !trimmedPhoneNumber) {
+      setFormError("Enter a phone number when SMS is selected.");
       return;
     }
 
@@ -160,6 +187,7 @@ export default function StaffSettings() {
     try {
       const staffPayload = {
         ...form,
+        phoneNumber: trimmedPhoneNumber,
         ...(trimmedSlackUserId
           ? { slackUserId: trimmedSlackUserId }
           : { slackUserId: undefined }),
@@ -171,7 +199,11 @@ export default function StaffSettings() {
         body: JSON.stringify(staffPayload),
       });
 
-      if (!response.ok) throw new Error("Could not add technician");
+      if (!response.ok) {
+        throw new Error(
+          await getResponseError(response, "Could not add technician"),
+        );
+      }
 
       const createdStaff = (await response.json()) as StaffMember;
       setStaff((currentStaff) => [...currentStaff, createdStaff]);
@@ -226,7 +258,11 @@ export default function StaffSettings() {
         body: JSON.stringify(payload),
       });
 
-      if (!response.ok) throw new Error("Could not update technician");
+      if (!response.ok) {
+        throw new Error(
+          await getResponseError(response, "Could not update technician"),
+        );
+      }
 
       const updatedStaff = (await response.json()) as StaffMember;
       setStaff((currentStaff) =>
@@ -272,7 +308,11 @@ export default function StaffSettings() {
         }),
       });
 
-      if (!response.ok) throw new Error("Could not update Slack user ID");
+      if (!response.ok) {
+        throw new Error(
+          await getResponseError(response, "Could not update Slack user ID"),
+        );
+      }
 
       const updatedStaff = (await response.json()) as StaffMember;
       setStaff((currentStaff) =>
@@ -316,7 +356,11 @@ export default function StaffSettings() {
         body: JSON.stringify({ isOnVacation }),
       });
 
-      if (!response.ok) throw new Error("Could not update status");
+      if (!response.ok) {
+        throw new Error(
+          await getResponseError(response, "Could not update status"),
+        );
+      }
 
       const updatedStaff = (await response.json()) as StaffMember;
       setStaff((currentStaff) =>
@@ -353,7 +397,11 @@ export default function StaffSettings() {
         method: "DELETE",
       });
 
-      if (!response.ok) throw new Error("Could not delete technician");
+      if (!response.ok) {
+        throw new Error(
+          await getResponseError(response, "Could not delete technician"),
+        );
+      }
     } catch (err) {
       setStaff(previousStaff);
       setListError(err instanceof Error ? err.message : "Something went wrong");
@@ -361,7 +409,7 @@ export default function StaffSettings() {
   }
 
   return (
-    <main className="flex flex-1 flex-col gap-8 overflow-y-auto px-10 py-8">
+    <main className="scrollbar-hidden flex flex-1 flex-col gap-8 overflow-y-auto px-10 py-8">
       <div>
         <h1 className="text-3xl font-semibold text-slate-50">Settings</h1>
         <p className="mt-2 text-sm text-slate-400">
@@ -373,9 +421,9 @@ export default function StaffSettings() {
         <div className="overflow-hidden rounded-2xl border border-slate-800/80 bg-slate-950/60">
           <div className="grid grid-cols-[1.2fr_1.2fr_0.8fr_minmax(280px,1fr)_112px_56px] gap-3 border-b border-slate-800/80 px-5 py-3 text-xs font-semibold uppercase tracking-wide text-slate-500">
             <span>Name</span>
-            <span>Email</span>
-            <span>Team</span>
             <span>Contact</span>
+            <span>Team</span>
+            <span>Channels</span>
             <span className="text-center">Status</span>
             <span />
           </div>
@@ -403,9 +451,12 @@ export default function StaffSettings() {
                       {member.organization}
                     </p>
                   </div>
-                  <span className="truncate text-slate-300">
-                    {member.email}
-                  </span>
+                  <div className="min-w-0">
+                    <p className="truncate text-slate-300">{member.email}</p>
+                    <p className="truncate text-xs text-slate-500">
+                      {member.phoneNumber || "No phone number"}
+                    </p>
+                  </div>
                   <span className="text-slate-300">{member.department}</span>
                   <div>
                     <div className="flex flex-wrap gap-2">
@@ -565,6 +616,22 @@ export default function StaffSettings() {
                   }))
                 }
                 className="mt-2 h-11 w-full rounded-xl border border-slate-800 bg-slate-900 px-3 text-sm text-slate-100 outline-none transition focus:border-emerald-400/70"
+              />
+            </label>
+            <label className="block text-xs font-semibold text-slate-400">
+              Phone number
+              <input
+                required
+                type="tel"
+                value={form.phoneNumber}
+                placeholder="+46734348683"
+                onChange={(event) =>
+                  setForm((currentForm) => ({
+                    ...currentForm,
+                    phoneNumber: event.target.value,
+                  }))
+                }
+                className="mt-2 h-11 w-full rounded-xl border border-slate-800 bg-slate-900 px-3 text-sm text-slate-100 outline-none transition placeholder:text-slate-600 focus:border-emerald-400/70"
               />
             </label>
             <label className="block text-xs font-semibold text-slate-400">
