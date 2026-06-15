@@ -37,6 +37,9 @@ type DbIncident = {
     target: string;
     assignedTo: string;
     assignedDepartment: string | null;
+    assignedStaffId: string | null;
+    assignedPhoneNumber: string | null;
+    assignedNotificationMethods: string[];
     recommendation: string;
   } | null;
 };
@@ -66,6 +69,8 @@ type Incident = {
   assignedTo: {
     name: string;
     department: string;
+    phoneNumber?: string | null;
+    notificationMethods?: string[];
   } | null;
 };
 
@@ -169,6 +174,8 @@ function toIncident(incident: DbIncident): Incident {
         ? {
             name: analysis.assignedTo,
             department: analysis.assignedDepartment || "Unknown department",
+            phoneNumber: analysis.assignedPhoneNumber,
+            notificationMethods: analysis.assignedNotificationMethods,
           }
         : null,
   };
@@ -251,7 +258,7 @@ export default function Home() {
       <Navbar activeTab={activeTab} onTabChange={setActiveTab} />
 
       {activeTab === "incidents" ? (
-        <main className="flex flex-1 flex-col gap-8 overflow-y-auto px-10 py-8">
+        <main className="scrollbar-hidden flex flex-1 flex-col gap-8 overflow-y-auto px-10 py-8">
           <div>
             <h1 className="text-3xl font-semibold text-slate-50">Incidents</h1>
             <p className="mt-2 text-sm text-slate-400">

@@ -1,3 +1,9 @@
+"use client";
+
+import { useState } from "react";
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
+
 type IncidentDetailProps = {
   id: string;
   title: string;
@@ -22,11 +28,14 @@ type IncidentDetailProps = {
   assignedTo: {
     name: string;
     department: string;
+    phoneNumber?: string | null;
+    notificationMethods?: string[];
   } | null;
   onClose: () => void;
 };
 
 export default function IncidentDetail({
+  id,
   title,
   severity,
   service,
@@ -44,6 +53,53 @@ export default function IncidentDetail({
     Warning: "text-yellow-400",
     Info: "text-blue-400",
   };
+  const [notifyStatus, setNotifyStatus] = useState<
+    "idle" | "sending" | "sent" | "error"
+  >("idle");
+  const [notifyMessage, setNotifyMessage] = useState<string | null>(null);
+
+  async function notifyAssignedStaff() {
+    setNotifyStatus("sending");
+    setNotifyMessage(null);
+
+    try {
+      const response = await fetch(`${API_URL}/incidents/${id}/notify`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      });
+      const data = (await response.json()) as {
+        message?: string;
+        sentMethods?: string[];
+        failedMethods?: Array<{ method: string; reason?: string }>;
+      };
+
+      if (!response.ok) {
+        throw new Error(data.message || "Could not notify technician");
+      }
+
+      const failedText = data.failedMethods?.length
+        ? ` Failed: ${data.failedMethods
+            .map((failure) =>
+              failure.reason
+                ? `${failure.method} (${failure.reason})`
+                : failure.method,
+            )
+            .join(", ")}`
+        : "";
+
+      setNotifyStatus("sent");
+      setNotifyMessage(
+        data.sentMethods?.length
+          ? `Notified via ${data.sentMethods.join(", ")}.${failedText}`
+          : "Notification sent",
+      );
+    } catch (error) {
+      setNotifyStatus("error");
+      setNotifyMessage(
+        error instanceof Error ? error.message : "Could not notify technician",
+      );
+    }
+  }
 
   return (
     <div className="sticky top-0 flex h-screen w-96 flex-col gap-6 border-l border-slate-800/80 bg-slate-950 px-6 py-8 text-slate-100 ">
@@ -58,7 +114,7 @@ export default function IncidentDetail({
       <div>
         <h2 className="text-2xl font-semibold text-slate-50">{title}</h2>
         <p className="mt-2 text-sm text-slate-400">{timestamp}</p>
-        <div className="mt-3 flex gap-2 overflow-x-scroll h-10">
+        <div className="scrollbar-hidden mt-3 flex h-10 gap-2 overflow-x-auto">
           <span
             className={`rounded-sm flex items-center bg-slate-900/80 px-2 py-1 text-xs font-semibold ${severityColor[severity]}`}
           >
@@ -73,7 +129,7 @@ export default function IncidentDetail({
         </div>
       </div>
 
-      <div className="space-y-4 overflow-y-auto pr-2">
+      <div className="scrollbar-hidden space-y-4 overflow-y-auto pr-2">
         <div>
           <h3 className="text-sm font-semibold uppercase tracking-wider text-slate-400">
             Specified error
@@ -121,6 +177,25 @@ export default function IncidentDetail({
               {assignedTo.name}
               <span className="text-slate-500"> • {assignedTo.department}</span>
             </p>
+            <button
+              type="button"
+              disabled={notifyStatus === "sending"}
+              onClick={notifyAssignedStaff}
+              className="mt-3 inline-flex h-10 w-full items-center justify-center rounded-lg bg-emerald-500 px-3 text-sm font-semibold text-slate-950 transition hover:bg-emerald-400 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {notifyStatus === "sending" ? "Notifying..." : "Notify"}
+            </button>
+            {notifyMessage && (
+              <p
+                className={`mt-2 text-xs ${
+                  notifyStatus === "error"
+                    ? "text-red-300"
+                    : "text-emerald-300"
+                }`}
+              >
+                {notifyMessage}
+              </p>
+            )}
           </div>
         )}
 
