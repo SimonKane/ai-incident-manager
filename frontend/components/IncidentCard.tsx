@@ -13,33 +13,31 @@ type IncidentCardProps = {
 
 const severityConfig = {
   Critical: {
-    icon: "🔴",
-    bgColor: "bg-red-950/50",
-    textColor: "text-red-400",
-    borderColor: "border-red-900/30",
+    label: "CR",
+    chip: "border-red-400/30 bg-red-500/10 text-red-200",
+    dot: "bg-red-400",
   },
   Warning: {
-    icon: "⚠️",
-    bgColor: "bg-yellow-950/50",
-    textColor: "text-yellow-400",
-    borderColor: "border-yellow-900/30",
+    label: "WA",
+    chip: "border-amber-400/30 bg-amber-500/10 text-amber-100",
+    dot: "bg-amber-300",
   },
   Info: {
-    icon: "ℹ️",
-    bgColor: "bg-blue-950/50",
-    textColor: "text-blue-400",
-    borderColor: "border-blue-900/30",
+    label: "IN",
+    chip: "border-sky-400/30 bg-sky-500/10 text-sky-100",
+    dot: "bg-sky-300",
   },
 };
 
 const statusConfig = {
-  Resolved: "text-emerald-400",
-  Escalated: "text-purple-400",
-  Pending: "text-slate-400",
+  Resolved: "border-emerald-300/25 bg-emerald-400/10 text-emerald-200",
+  Escalated: "border-fuchsia-300/25 bg-fuchsia-400/10 text-fuchsia-200",
+  Pending: "border-slate-300/20 bg-slate-400/10 text-slate-300",
 };
 
 export default function IncidentCard({
   title,
+  description,
   severity,
   service,
   environment,
@@ -54,34 +52,53 @@ export default function IncidentCard({
     <button
       type="button"
       onClick={onClick}
-      className={`w-full text-left transition-all ${isSelected ? "ring-2 ring-emerald-400/50" : ""}`}
+      className={`w-full cursor-pointer rounded-lg border p-4 text-left transition ${
+        isSelected
+          ? "border-teal-300/45 bg-teal-400/[0.08] shadow-lg shadow-teal-950/20"
+          : "border-white/10 bg-white/[0.03] hover:border-white/20 hover:bg-white/[0.06]"
+      }`}
     >
-      <div
-        className={`flex gap-4 rounded-2xl border p-4 ${config.bgColor} ${config.borderColor} cursor-pointer hover:bg-opacity-70`}
-      >
-        <div className="flex flex-col items-center gap-2">
-          <div className="text-2xl">{config.icon}</div>
-          <div className="whitespace-nowrap text-xs text-slate-400">
+      <div className="flex gap-4">
+        <div className="flex w-12 shrink-0 flex-col items-center gap-2">
+          <span
+            className={`flex h-10 w-10 items-center justify-center rounded-lg border text-xs font-bold ${config.chip}`}
+          >
+            {config.label}
+          </span>
+          <span className="whitespace-nowrap text-[11px] text-slate-500">
             {timestamp}
-          </div>
+          </span>
         </div>
 
-        <div className="flex-1">
-          <div className="flex items-start justify-between">
-            <div>
-              <h3 className="font-semibold text-slate-100">{title}</h3>
-              <p className="text-xs text-slate-400">
-                <span className={`font-semibold ${config.textColor}`}>
-                  {severity}
-                </span>
-                {" • "}
-                {service} {" • "} {environment}
+        <div className="min-w-0 flex-1">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <div className="flex items-center gap-2">
+                <span className={`h-2 w-2 rounded-full ${config.dot}`} />
+                <h3 className="truncate text-sm font-semibold text-white">
+                  {title}
+                </h3>
+              </div>
+              <p className="mt-2 line-clamp-2 text-xs leading-5 text-slate-400">
+                {description}
               </p>
             </div>
             <span
-              className={`whitespace-nowrap text-xs font-semibold ${statusConfig[status]}`}
+              className={`shrink-0 rounded-md border px-2 py-1 text-[10px] font-semibold ${statusConfig[status]}`}
             >
               {status}
+            </span>
+          </div>
+
+          <div className="mt-4 flex flex-wrap gap-2 text-[11px] text-slate-400">
+            <span className="rounded-md border border-white/10 bg-black/20 px-2 py-1">
+              {severity}
+            </span>
+            <span className="rounded-md border border-white/10 bg-black/20 px-2 py-1">
+              {service}
+            </span>
+            <span className="rounded-md border border-white/10 bg-black/20 px-2 py-1">
+              {environment}
             </span>
           </div>
         </div>

@@ -1,147 +1,101 @@
 import Image from "next/image";
 
-type AppTab = "incidents" | "settings";
-
 type NavbarProps = {
-  activeTab: AppTab;
-  onTabChange: (tab: AppTab) => void;
+  activeView: "incidents" | "team";
+  onViewChange: (view: "incidents" | "team") => void;
+  activeCount: number;
+  handledCount: number;
+  feedState: "syncing" | "ready";
 };
 
-export default function RightNavbar({ activeTab, onTabChange }: NavbarProps) {
-  const navItemClass = (tab: AppTab) =>
-    `flex cursor-pointer items-center gap-3 rounded-2xl px-4 py-3 text-left text-sm font-semibold transition ${
-      activeTab === tab
-        ? "bg-emerald-500/10 text-emerald-100 ring-1 ring-emerald-400/20"
-        : "text-slate-200 hover:bg-slate-800/50"
-    }`;
-
-  const iconClass = (tab: AppTab) =>
-    `inline-flex h-8 w-8 items-center justify-center rounded-full ${
-      activeTab === tab
-        ? "bg-emerald-500/20 text-emerald-200"
-        : "bg-slate-800/70 text-slate-300"
+export default function Navbar({
+  activeView,
+  onViewChange,
+  activeCount,
+  handledCount,
+  feedState,
+}: NavbarProps) {
+  const navClass = (view: "incidents" | "team") =>
+    `flex w-full cursor-pointer items-center gap-3 rounded-lg border px-4 py-3 text-left text-sm transition ${
+      activeView === view
+        ? "border-teal-300/20 bg-teal-400/10 font-semibold text-teal-100"
+        : "border-white/10 bg-white/[0.03] text-slate-400 hover:border-white/20 hover:bg-white/[0.06] hover:text-slate-200"
     }`;
 
   return (
-    <aside className="sticky top-0 flex h-screen w-64 flex-col gap-6 border-r border-slate-800/80 bg-gradient-to-b from-slate-950 via-slate-950 to-slate-900 px-6 py-8 text-slate-100 shadow-[0_0_30px_rgba(0,0,0,0.35)]">
+    <aside className="hidden h-screen w-72 shrink-0 flex-col border-r border-white/10 bg-[#081317]/95 px-5 py-6 shadow-2xl shadow-black/30 lg:sticky lg:top-0 lg:flex">
       <div className="flex items-center gap-3">
-        <div className="flex items-center justify-center">
-          <Image
-            src="/ai-fix-logo.png"
-            alt="LogFix AI"
-            width={56}
-            height={56}
-            className="h-14 w-14 object-contain"
-            priority
-          />
-        </div>
+        <Image
+          src="/ai-fix-logo.png"
+          alt="AI Incident Manager"
+          width={52}
+          height={52}
+          className="h-12 w-12 object-contain"
+          priority
+        />
         <div>
-          <p className="text-sm font-semibold tracking-wide text-slate-100">
+          <p className="text-base font-semibold tracking-tight text-white">
             LogFix AI
           </p>
+          <p className="text-xs text-slate-500">Incident intelligence</p>
         </div>
       </div>
 
-      <nav className="flex flex-col gap-2">
+      <nav className="mt-8 space-y-2">
         <button
           type="button"
-          className={navItemClass("incidents")}
-          onClick={() => onTabChange("incidents")}
+          onClick={() => onViewChange("incidents")}
+          className={navClass("incidents")}
         >
-          <span className={iconClass("incidents")}>
-            <svg
-              viewBox="0 0 24 24"
-              className="h-4 w-4"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.8"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              aria-hidden
-            >
-              <path d="M6 7h12" />
-              <path d="M6 12h12" />
-              <path d="M6 17h12" />
-            </svg>
+          <span className="flex h-8 w-8 items-center justify-center rounded-md bg-teal-300/15 text-xs">
+            AI
           </span>
           Incidents
         </button>
         <button
           type="button"
-          className={navItemClass("settings")}
-          onClick={() => onTabChange("settings")}
+          onClick={() => onViewChange("team")}
+          className={navClass("team")}
         >
-          <span className={iconClass("settings")}>
-            <svg
-              viewBox="0 0 24 24"
-              className="h-4 w-4"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.8"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              aria-hidden
-            >
-              <path d="M12 3v2" />
-              <path d="M12 19v2" />
-              <path d="M4.93 4.93l1.41 1.41" />
-              <path d="M17.66 17.66l1.41 1.41" />
-              <path d="M3 12h2" />
-              <path d="M19 12h2" />
-              <path d="M4.93 19.07l1.41-1.41" />
-              <path d="M17.66 6.34l1.41-1.41" />
-              <circle cx="12" cy="12" r="3" />
-            </svg>
+          <span className="flex h-8 w-8 items-center justify-center rounded-md bg-white/5 text-xs">
+            IT
           </span>
-          Settings
+          Technicians
         </button>
       </nav>
 
-      <div className="mt-auto rounded-2xl border border-slate-800/80 bg-slate-950/60 p-4">
+      <div className="mt-8 rounded-lg border border-white/10 bg-white/[0.03] p-4">
         <div className="flex items-center justify-between text-xs text-slate-400">
-          <span>AI-agent</span>
-          <span className="flex items-center gap-1 text-emerald-300">
-            <span className="h-2 w-2 rounded-full bg-emerald-400" />
-            Online
+          <span>Demo engine</span>
+          <span className="flex items-center gap-2 text-teal-200">
+            <span className="h-2 w-2 rounded-full bg-teal-300" />
+            {feedState === "ready" ? "Ready" : "Syncing"}
           </span>
         </div>
-        <div className="mt-4 space-y-3 text-xs text-slate-300">
+        <div className="mt-4 space-y-3 text-sm">
           <div className="flex items-center justify-between">
-            <span>Resolved today</span>
-            <span className="text-sm font-semibold text-slate-100">23</span>
+            <span className="text-slate-400">Seeded incidents</span>
+            <span className="font-semibold text-white">{activeCount}</span>
           </div>
           <div className="flex items-center justify-between">
-            <span>MTTR (today)</span>
-            <span className="text-sm font-semibold text-slate-100">18m</span>
+            <span className="text-slate-400">Handled</span>
+            <span className="font-semibold text-white">{handledCount}</span>
           </div>
           <div className="flex items-center justify-between">
-            <span>Detected issues</span>
-            <span className="text-sm font-semibold text-slate-100">47</span>
+            <span className="text-slate-400">External sends</span>
+            <span className="font-semibold text-teal-200">Simulated</span>
           </div>
         </div>
-        <div className="mt-4 flex items-center justify-between rounded-xl bg-slate-900/80 px-3 py-2 text-xs">
-          <div className="flex items-center gap-2">
-            <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-500/20 text-emerald-200">
-              AC
-            </span>
-            <div>
-              <p className="text-sm font-semibold text-slate-100">Acme Corp</p>
-              <p className="text-[11px] text-slate-400">Production</p>
-            </div>
-          </div>
-          <svg
-            viewBox="0 0 24 24"
-            className="h-4 w-4 text-slate-400"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="1.6"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            aria-hidden
-          >
-            <path d="M6 9l6 6 6-6" />
-          </svg>
-        </div>
+      </div>
+
+      <div className="mt-auto rounded-lg border border-white/10 bg-[linear-gradient(145deg,rgba(20,184,166,0.12),rgba(15,23,42,0.55))] p-4">
+        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-teal-200">
+          Portfolio build
+        </p>
+        <p className="mt-3 text-sm leading-6 text-slate-300">
+          Frontend-only showcase with backend architecture preserved for review
+          and future scaling.
+        </p>
       </div>
     </aside>
   );

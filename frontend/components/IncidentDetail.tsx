@@ -1,8 +1,6 @@
 "use client";
 
-import { useState } from "react";
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
+import { useEffect, useState } from "react";
 
 type IncidentDetailProps = {
   id: string;
@@ -14,6 +12,8 @@ type IncidentDetailProps = {
   description: string;
   specifiedError: string;
   remediation: string;
+  impact: string;
+  confidence: string;
   timeline: Array<{
     time: string;
     title: string;
@@ -31,198 +31,169 @@ type IncidentDetailProps = {
     phoneNumber?: string | null;
     notificationMethods?: string[];
   } | null;
-  onClose: () => void;
 };
 
 export default function IncidentDetail({
   id,
   title,
-  severity,
-  service,
-  environment,
   timestamp,
+  description,
   specifiedError,
   remediation,
+  impact,
+  confidence,
   timeline,
   actions,
   assignedTo,
-  onClose,
 }: IncidentDetailProps) {
-  const severityColor = {
-    Critical: "text-red-400",
-    Warning: "text-yellow-400",
-    Info: "text-blue-400",
-  };
-  const [notifyStatus, setNotifyStatus] = useState<
-    "idle" | "sending" | "sent" | "error"
-  >("idle");
-  const [notifyMessage, setNotifyMessage] = useState<string | null>(null);
+  const [simulationState, setSimulationState] = useState<
+    "preparing" | "sent" | "skipped"
+  >(assignedTo ? "preparing" : "skipped");
 
-  async function notifyAssignedStaff() {
-    setNotifyStatus("sending");
-    setNotifyMessage(null);
+  useEffect(() => {
+    if (!assignedTo) return;
 
-    try {
-      const response = await fetch(`${API_URL}/incidents/${id}/notify`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-      });
-      const data = (await response.json()) as {
-        message?: string;
-        sentMethods?: string[];
-        failedMethods?: Array<{ method: string; reason?: string }>;
-      };
+    const timer = window.setTimeout(() => setSimulationState("sent"), 700);
+    return () => window.clearTimeout(timer);
+  }, [assignedTo, id]);
 
-      if (!response.ok) {
-        throw new Error(data.message || "Could not notify technician");
-      }
-
-      const failedText = data.failedMethods?.length
-        ? ` Failed: ${data.failedMethods
-            .map((failure) =>
-              failure.reason
-                ? `${failure.method} (${failure.reason})`
-                : failure.method,
-            )
-            .join(", ")}`
-        : "";
-
-      setNotifyStatus("sent");
-      setNotifyMessage(
-        data.sentMethods?.length
-          ? `Notified via ${data.sentMethods.join(", ")}.${failedText}`
-          : "Notification sent",
-      );
-    } catch (error) {
-      setNotifyStatus("error");
-      setNotifyMessage(
-        error instanceof Error ? error.message : "Could not notify technician",
-      );
-    }
-  }
+  const methods = assignedTo?.notificationMethods?.length
+    ? assignedTo.notificationMethods
+    : ["slack"];
 
   return (
-    <div className="sticky top-0 flex h-screen w-96 flex-col gap-6 border-l border-slate-800/80 bg-slate-950 px-6 py-8 text-slate-100 ">
-      <button
-        type="button"
-        onClick={onClose}
-        className="absolute right-4 top-4 cursor-pointer text-slate-400 hover:text-slate-200"
-      >
-        ✕
-      </button>
-
-      <div>
-        <h2 className="text-2xl font-semibold text-slate-50">{title}</h2>
-        <p className="mt-2 text-sm text-slate-400">{timestamp}</p>
-        <div className="scrollbar-hidden mt-3 flex h-10 gap-2 overflow-x-auto">
-          <span
-            className={`rounded-sm flex items-center bg-slate-900/80 px-2 py-1 text-xs font-semibold ${severityColor[severity]}`}
-          >
-            {severity}
-          </span>
-          <span className="rounded-full bg-slate-900/80 px-3 py-1 text-xs text-slate-300">
-            {service}
-          </span>
-          <span className="rounded-full bg-slate-900/80 px-3 py-1 text-xs text-slate-300">
-            {environment}
-          </span>
+    <aside className="min-h-[560px] rounded-lg border border-white/10 bg-slate-950/75 p-5 shadow-xl shadow-black/20 xl:sticky xl:top-7 xl:h-[calc(100vh-56px)]">
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h2 className="text-2xl font-semibold tracking-tight text-white">
+            {title}
+          </h2>
+          <p className="mt-2 text-sm leading-6 text-slate-400">
+            {description}
+          </p>
+        </div>
+        <div className="rounded-lg border border-teal-300/20 bg-teal-400/10 px-3 py-2 text-right">
+          <p className="text-[11px] uppercase tracking-[0.16em] text-teal-200">
+            AI confidence
+          </p>
+          <p className="text-xl font-semibold text-white">{confidence}</p>
         </div>
       </div>
 
-      <div className="scrollbar-hidden space-y-4 overflow-y-auto pr-2">
-        <div>
-          <h3 className="text-sm font-semibold uppercase tracking-wider text-slate-400">
-            Specified error
+      <div className="scrollbar-hidden mt-5 max-h-[calc(100%-150px)] space-y-4 overflow-y-auto pr-1">
+        <section className="rounded-lg border border-white/10 bg-white/[0.03] p-4">
+          <h3 className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
+            Detected problem
           </h3>
-          <p className="mt-2 text-sm leading-6 text-slate-300">
+          <p className="mt-3 text-sm leading-6 text-slate-300">
             {specifiedError}
           </p>
-        </div>
+          <p className="mt-3 rounded-md border border-white/10 bg-black/20 px-3 py-2 text-xs text-slate-400">
+            Impact: {impact}
+          </p>
+        </section>
 
-        <div>
-          <h3 className="text-sm font-semibold uppercase tracking-wider text-slate-400">
+        <section className="rounded-lg border border-white/10 bg-white/[0.03] p-4">
+          <h3 className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
             Recommended action
           </h3>
-          <p className="mt-2 text-sm leading-6 text-slate-300">{remediation}</p>
+          <p className="mt-3 text-sm leading-6 text-slate-300">
+            {remediation}
+          </p>
 
           {actions.length > 0 && (
-            <div className="mt-3 space-y-3">
+            <div className="mt-4 space-y-2">
               {actions.map((action) => (
                 <div
                   key={action.id}
-                  className="flex items-start gap-3 rounded-lg bg-slate-900/40 p-3"
+                  className="flex items-start justify-between gap-3 rounded-md border border-emerald-300/15 bg-emerald-400/10 px-3 py-3"
                 >
-                  <div className="mt-1 text-emerald-400">✓</div>
-                  <div className="flex-1 text-sm">
-                    <p className="font-semibold text-slate-100">
+                  <div>
+                    <p className="text-sm font-semibold text-emerald-50">
                       {action.title}
                     </p>
-                    <p className="text-xs text-slate-400">{action.timestamp}</p>
+                    <p className="mt-1 text-xs text-emerald-200/70">
+                      {action.timestamp}
+                    </p>
                   </div>
-                  <span className="rounded-full bg-emerald-500/20 px-2 py-1 text-[10px] font-semibold text-emerald-300">
+                  <span className="rounded-md bg-emerald-300/15 px-2 py-1 text-[10px] font-semibold text-emerald-100">
                     {action.status}
                   </span>
                 </div>
               ))}
             </div>
           )}
-        </div>
+        </section>
 
-        {assignedTo && (
-          <div>
-            <h3 className="text-sm font-semibold uppercase tracking-wider text-slate-400">
-              Assigned to
-            </h3>
-            <p className="mt-2 text-sm leading-6 text-slate-300">
-              {assignedTo.name}
-              <span className="text-slate-500"> • {assignedTo.department}</span>
-            </p>
-            <button
-              type="button"
-              disabled={notifyStatus === "sending"}
-              onClick={notifyAssignedStaff}
-              className="mt-3 inline-flex h-10 w-full items-center justify-center rounded-lg bg-emerald-500 px-3 text-sm font-semibold text-slate-950 transition hover:bg-emerald-400 disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              {notifyStatus === "sending" ? "Notifying..." : "Notify"}
-            </button>
-            {notifyMessage && (
-              <p
-                className={`mt-2 text-xs ${
-                  notifyStatus === "error"
-                    ? "text-red-300"
-                    : "text-emerald-300"
-                }`}
-              >
-                {notifyMessage}
-              </p>
-            )}
-          </div>
-        )}
-
-        {timeline.length > 0 && (
-          <div>
-            <h3 className="text-sm font-semibold uppercase tracking-wider text-slate-400">
-              Timeline
-            </h3>
-            <div className="mt-3 space-y-3 border-l border-slate-800/50 pl-4">
-              {timeline.map((event, idx) => (
-                <div key={idx} className="relative">
-                  <div className="absolute left-[-13px] top-1 h-2 w-2 rounded-full bg-slate-700" />
-                  <p className="text-xs font-semibold text-slate-300">
-                    {event.time}
+        <section className="rounded-lg border border-white/10 bg-white/[0.03] p-4">
+          <h3 className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
+            Notification simulation
+          </h3>
+          {assignedTo ? (
+            <div className="mt-3 space-y-3">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-sm font-semibold text-white">
+                    {assignedTo.name}
                   </p>
-                  <p className="text-xs text-slate-400">{event.title}</p>
-                  {event.description && (
-                    <p className="mt-1 text-xs text-slate-500">
-                      {event.description}
-                    </p>
-                  )}
+                  <p className="text-xs text-slate-400">
+                    {assignedTo.department}
+                  </p>
                 </div>
-              ))}
+                <span className="rounded-md border border-white/10 bg-black/20 px-2.5 py-1 text-xs text-slate-300">
+                  Auto routed
+                </span>
+              </div>
+
+              <div className="space-y-2">
+                {methods.map((method) => (
+                  <p
+                    key={method}
+                    className="rounded-md border border-teal-300/20 bg-teal-400/10 px-3 py-2 text-xs text-teal-100"
+                  >
+                    {simulationState === "sent"
+                      ? `${method.toUpperCase()} message sent (just simulation)`
+                      : `Preparing ${method.toUpperCase()} simulation...`}
+                  </p>
+                ))}
+              </div>
             </div>
+          ) : (
+            <p className="mt-3 rounded-md border border-white/10 bg-black/20 px-3 py-2 text-xs text-slate-400">
+              No notification needed for this informational incident.
+            </p>
+          )}
+        </section>
+
+        <section className="rounded-lg border border-white/10 bg-white/[0.03] p-4">
+          <h3 className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
+            Timeline
+          </h3>
+          <div className="mt-4 space-y-3 border-l border-white/10 pl-4">
+            <div className="relative">
+              <div className="absolute left-[-21px] top-1 h-2.5 w-2.5 rounded-full bg-teal-300" />
+              <p className="text-xs font-semibold text-slate-300">
+                {timestamp}
+              </p>
+              <p className="text-xs text-slate-500">Incident opened</p>
+            </div>
+            {timeline.map((event) => (
+              <div key={`${event.time}-${event.title}`} className="relative">
+                <div className="absolute left-[-20px] top-1.5 h-2 w-2 rounded-full bg-slate-600" />
+                <p className="text-xs font-semibold text-slate-300">
+                  {event.time}
+                </p>
+                <p className="text-xs text-slate-400">{event.title}</p>
+                {event.description && (
+                  <p className="mt-1 text-xs leading-5 text-slate-500">
+                    {event.description}
+                  </p>
+                )}
+              </div>
+            ))}
           </div>
-        )}
+        </section>
       </div>
-    </div>
+    </aside>
   );
 }
